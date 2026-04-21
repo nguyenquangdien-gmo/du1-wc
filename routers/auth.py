@@ -98,12 +98,26 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         email += "@runsystem.net"
         
     user = db.query(models.User).filter(models.User.email == email).first()
-    if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    
+    print(f"DEBUG LOGIN: Email={email}, Found User={'Yes' if user else 'No'}")
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    try:
+        is_correct = verify_password(form_data.password, user.password_hash)
+        print(f"DEBUG LOGIN: Password Correct={is_correct}, User Active={user.is_active}")
+        
+        if not is_correct:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except Exception as e:
+        print(f"DEBUG LOGIN ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Lỗi xử lý mật khẩu trên Server: {str(e)}")
+
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email.")
     
