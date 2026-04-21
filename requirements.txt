@@ -9,3 +9,4 @@ python-multipart
 apscheduler
 pytz
 python-dotenv
+beautifulsoup4
