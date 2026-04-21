@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic[email]
+PyJWT
+passlib[bcrypt]
+google-genai
+python-multipart
+apscheduler
+pytz
+python-dotenv

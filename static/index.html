@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">World Cup Betting - Đăng nhập</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #1a1a2e; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: 'Outfit', sans-serif; }
+        .card { background-color: #16213e; border: 1px solid #0f3460; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5); border-radius: 15px; color: white !important; }
+        .card-header { background-color: #0f3460; font-weight: bold; border-radius: 15px 15px 0 0 !important; color: white; border-bottom: 2px solid #e94560; }
+        .btn-primary { background-color: #e94560; border-color: #e94560; color: white; font-weight: 600; padding: 10px; border-radius: 8px; transition: 0.3s; }
+        .btn-primary:hover { background-color: #d1304b; border-color: #d1304b; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(233, 69, 96, 0.3); }
+        .form-control { background-color: #0f3460; color: white !important; border: 1px solid #2a5298; border-radius: 8px; }
+        .form-control:focus { background-color: #16213e; color: white !important; border-color: #e94560; box-shadow: 0 0 5px #e94560; }
+        
+        .form-label { color: #ffffff !important; opacity: 1 !important; }
+        ::placeholder { color: #8a8da3 !important; opacity: 1 !important; }
+
+        .error-msg { color: #ff4d4d; font-size: 0.75rem; margin-top: 4px; display: none; font-weight: 500; }
+
+        /* Custom jQuery UI Dialog Styles */
+        .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 1100 !important; }
+        .ui-dialog-titlebar { background: #0f3460 !important; border: none !important; color: #e94560 !important; font-weight: bold !important; padding: 12px 20px !important; }
+        .ui-dialog-content { padding: 20px !important; font-size: 1.1rem !important; color: #e0e0e0 !important; }
+        .ui-dialog-buttonpane { background: #0f3460 !important; border-top: 1px solid #2a5298 !important; padding: 10px 20px !important; }
+        .ui-button { background: #e94560 !important; color: white !important; border: none !important; border-radius: 6px !important; padding: 6px 20px !important; font-weight: 600 !important; }
+        .ui-button:hover { background: #d1304b !important; }
+        .ui-dialog-titlebar-close { display: none !important; }
+        .ui-widget-overlay { background: rgba(0,0,0,0.7) !important; opacity: 1 !important; }
+    </style>
+</head>
+<body>
+
+<div id="dialog-msg" title="Thông báo" style="display:none">
+  <p id="dialog-text"></p>
+</div>
+
+<div class="container" style="max-width: 400px;">
+    <!-- Form Đăng Nhập -->
+    <div class="card mb-4 shadow-lg" id="loginForm">
+        <div class="card-header text-center py-3 text-uppercase letter-spacing-1" id="loginHeader">Đăng Nhập World Cup</div>
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <label class="form-label small text-uppercase fw-bold">Email hoặc Username</label>
+                <input type="text" id="loginEmail" class="form-control" placeholder="Tên tài khoản hoặc email">
+                <div id="err_loginEmail" class="error-msg"></div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label small text-uppercase fw-bold">Mật khẩu</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu">
+                <div id="err_loginPassword" class="error-msg"></div>
+            </div>
+            <button class="btn btn-primary w-100" onclick="login()">Đăng nhập</button>
+            <div class="text-center mt-3">
+                <a href="#" onclick="showSection('registerForm')" class="text-light text-decoration-none small opacity-75 hover-opacity-100">Chưa có tài khoản? Đăng ký ngay</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Đăng Ký -->
+    <div class="card mb-4 d-none shadow-lg" id="registerForm">
+        <div class="card-header text-center py-3 text-uppercase letter-spacing-1" id="registerHeader">Tạo Tài Khoản Mới</div>
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <label class="form-label small text-uppercase fw-bold">Họ và Tên</label>
+                <input type="text" id="regName" class="form-control" placeholder="Nhập họ và tên thật">
+                <div id="err_regName" class="error-msg"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small text-uppercase fw-bold">Username / Email Công Ty</label>
+                <input type="text" id="regEmail" class="form-control" placeholder="Nhập username hoặc email công ty">
+                <div id="err_regEmail" class="error-msg text-info">Chỉ chấp nhận tài khoản @runsystem.net. Nếu thiếu, hệ thống sẽ tự động thêm đuôi.</div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label small text-uppercase fw-bold">Mật khẩu</label>
+                <input type="password" id="regPassword" class="form-control" placeholder="Nhập mật khẩu">
+                <div id="err_regPassword" class="error-msg"></div>
+            </div>
+            <button class="btn btn-primary w-100" onclick="register()">Đăng ký</button>
+            <div class="text-center mt-3">
+                <a href="#" onclick="showSection('loginForm')" class="text-light text-decoration-none small opacity-75 hover-opacity-100">Đã có tài khoản? Đăng nhập</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function showMsg(message, title = "Thông báo", callback = null) {
+        $("#dialog-text").text(message);
+        $("#dialog-msg").dialog({
+            title: title,
+            modal: true,
+            width: 350,
+            buttons: {
+                "Đóng": function() {
+                    $(this).dialog("close");
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
+    function showSection(id) {
+        $('.card').addClass('d-none');
+        $('#' + id).removeClass('d-none');
+        $('.error-msg').hide();
+    }
+
+    function clearErrors() {
+        $('.error-msg').hide().text('');
+    }
+
+    function showError(fieldId, msg) {
+        $(`#err_${fieldId}`).text(msg).fadeIn();
+    }
+
+    $(document).ready(function() {
+        if (localStorage.getItem('token')) {
+            window.location.href = '/static/dashboard.html';
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('activated')) {
+            showMsg("Tài khoản đã được kích hoạt thành công! Hãy đăng nhập để bắt đầu dự đoán.", "Thành công");
+        }
+        if (urlParams.has('error')) {
+            let err = urlParams.get('error');
+            let msg = "Kích hoạt thất bại. Link có thể đã hết hạn.";
+            if (err === 'invalid_token') msg = "Link kích hoạt không hợp lệ hoặc đã hết hạn.";
+            if (err === 'user_not_found') msg = "Người dùng không tồn tại.";
+            showMsg(msg, "Lỗi");
+        }
+
+        $('#loginEmail, #loginPassword').on('keypress', function(e) {
+            if (e.which == 13) login();
+        });
+
+        fetchActiveYear();
+    });
+
+    async function fetchActiveYear() {
+        try {
+            const response = await fetch('/api/admin/active-year');
+            const data = await response.json();
+            const year = data.year;
+            $('#pageTitle').text(`World Cup ${year} Betting - Đăng nhập`);
+            $('#loginHeader').text(`Đăng Nhập World Cup ${year}`);
+            if ($('#registerHeader').length) {
+                $('#registerHeader').text(`Đăng Ký World Cup ${year}`);
+            }
+        } catch (e) {}
+    }
+
+    function register() {
+        clearErrors();
+        let name = $('#regName').val();
+        let email = $('#regEmail').val();
+        let pass = $('#regPassword').val();
+
+        if(!name) { showError('regName', 'Thiếu họ tên'); return; }
+        if(!email) { 
+            showError('regEmail', 'Vui lòng nhập email hoặc username'); 
+            return; 
+        }
+        if(!pass || pass.length < 6) { showError('regPassword', 'Mật khẩu ít nhất 6 ký tự'); return; }
+
+        let payload = { email: email, full_name: name, password: pass };
+        $.ajax({
+            url: "/api/auth/register", type: "POST",
+            contentType: "application/json", data: JSON.stringify(payload),
+            success: function(res) { 
+                showMsg(res.message, "Đăng ký thành công", () => {
+                   window.location.reload();
+                }); 
+            },
+            error: function(err) { 
+                let msg = err.responseJSON?.detail || "Đăng ký thất bại";
+                if(msg.includes("registered")) showError('regEmail', 'Email này đã tồn tại');
+                else showMsg(msg, "Lỗi");
+            }
+        });
+    }
+
+    function login() {
+        clearErrors();
+        let email = $('#loginEmail').val();
+        let pass = $('#loginPassword').val();
+
+        if(!email) { showError('loginEmail', 'Nhập email'); return; }
+        if(!pass) { showError('loginPassword', 'Nhập mật khẩu'); return; }
+
+        let formData = new URLSearchParams();
+        formData.append("username", email);
+        formData.append("password", pass);
+
+        $.ajax({
+            url: "/api/auth/login", type: "POST",
+            data: formData.toString(),
+            contentType: "application/x-www-form-urlencoded",
+            success: function(res) {
+                localStorage.setItem("token", res.access_token);
+                window.location.href = "/dashboard";
+            },
+            error: function(err) { 
+                let msg = err.responseJSON?.detail || "Lỗi";
+                if(msg.includes("Inactive")) showMsg("Tài khoản chưa kích hoạt. Hãy check email.", "Chưa kích hoạt");
+                else showMsg("Email hoặc mật khẩu sai", "Lỗi đăng nhập");
+            }
+        });
+    }
+</script>
+</body>
+</html>

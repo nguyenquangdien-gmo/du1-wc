@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.db
+.db-shm
+.db-wal
+.DS_Store
+.vscode/
+.idea/
+.gemini/
+.env
+Dockerfile
+docker-compose.yml
+requirements.txt
+*.log

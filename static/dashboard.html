@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">World Cup Betting</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <style>
+        body { background-color: #1a1a2e; color: white; font-family: 'Outfit', sans-serif; }
+        .navbar { background-color: #0f3460; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); border-bottom: 2px solid #e94560; }
+        .card { background-color: #16213e; border: 1px solid #0f3460; border-radius: 12px; color: white !important; }
+        .match-card { transition: 0.3s; cursor: pointer; border: 1px solid #1a1a2e; }
+        .match-card:hover { transform: translateY(-5px); border-color: #e94560; box-shadow: 0px 8px 25px rgba(233, 69, 96, 0.2); }
+        .badge-live { background-color: #e94560; box-shadow: 0 0 10px #e94560; }
+        .badge-ready { background-color: #2a5298; }
+        .badge-scheduled { background-color: #444; opacity: 0.6; }
+        .badge-finished { background-color: #000; border: 1px solid #333; }
+        .prediction-btn { background-color: #0f3460; border: 1px solid #2a5298; color: white; border-radius: 8px; font-weight: 500; transition: 0.2s; }
+        .prediction-btn:hover, .prediction-btn.active { background-color: #e94560; border-color: #e94560; color: white; box-shadow: 0 0 10px rgba(233, 69, 96, 0.4); }
+        
+        /* Custom jQuery UI Dialog Styles */
+        .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 1100 !important; }
+        .ui-dialog-titlebar { background: #0f3460 !important; border: none !important; color: #e94560 !important; font-weight: bold !important; padding: 12px 20px !important; }
+        .ui-dialog-content { padding: 20px !important; font-size: 1rem !important; color: #e0e0e0 !important; }
+        .ui-dialog-buttonpane { background: #0f3460 !important; border-top: 1px solid #2a5298 !important; padding: 10px 20px !important; }
+        .ui-button { background: #e94560 !important; color: white !important; border: none !important; border-radius: 6px !important; padding: 6px 20px !important; font-weight: 600 !important; }
+        .ui-button:hover { background: #d1304b !important; }
+        .ui-dialog-titlebar-close { display: none !important; }
+        .ui-widget-overlay { background: rgba(0,0,0,0.7) !important; opacity: 1 !important; }
+    </style>
+</head>
+<body>
+
+<div id="dialog-msg" title="Notification" style="display:none">
+  <p id="dialog-text"></p>
+</div>
+
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 <span id="navYear">World Cup</span> BETTING</a>
+        <div class="d-flex align-items-center">
+            <span id="userInfo" class="me-3 text-info small"></span>
+            <a id="adminLink" href="/static/admin_matches.html" class="btn btn-warning btn-sm me-2" style="display:none">Cài đặt</a>
+            <button class="btn btn-outline-light btn-sm me-2" onclick="loadLeaderboard()" data-bs-toggle="modal" data-bs-target="#leaderboardModal">BXH</button>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container pb-5">
+    <h3 class="mb-4 text-center text-uppercase fw-bold letter-spacing-1">Lịch Thi Đấu & Đặt Cược</h3>
+    
+    <ul class="nav nav-pills justify-content-center mb-4" id="matchTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-groups-btn" data-bs-toggle="pill" data-bs-target="#tab-groups" type="button" role="tab">Vòng Bảng</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-32-btn" data-bs-toggle="pill" data-bs-target="#tab-32" type="button" role="tab">Vòng 32</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-16-btn" data-bs-toggle="pill" data-bs-target="#tab-16" type="button" role="tab">Vòng 16</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-quarter-btn" data-bs-toggle="pill" data-bs-target="#tab-quarter" type="button" role="tab">Tứ kết</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-semi-btn" data-bs-toggle="pill" data-bs-target="#tab-semi" type="button" role="tab">Bán kết</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-third-btn" data-bs-toggle="pill" data-bs-target="#tab-third" type="button" role="tab">Hạng 3</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-final-btn" data-bs-toggle="pill" data-bs-target="#tab-final" type="button" role="tab">Chung kết</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="matchesTabContent">
+        <div class="tab-pane fade show active" id="tab-groups" role="tabpanel"><div class="row g-4" id="container-groups"></div></div>
+        <div class="tab-pane fade" id="tab-32" role="tabpanel"><div class="row g-4" id="container-32"></div></div>
+        <div class="tab-pane fade" id="tab-16" role="tabpanel"><div class="row g-4" id="container-16"></div></div>
+        <div class="tab-pane fade" id="tab-quarter" role="tabpanel"><div class="row g-4" id="container-quarter"></div></div>
+        <div class="tab-pane fade" id="tab-semi" role="tabpanel"><div class="row g-4" id="container-semi"></div></div>
+        <div class="tab-pane fade" id="tab-third" role="tabpanel"><div class="row g-4" id="container-third"></div></div>
+        <div class="tab-pane fade" id="tab-final" role="tabpanel"><div class="row g-4" id="container-final"></div></div>
+    </div>
+</div>
+
+<!-- Prediction Modal -->
+<div class="modal fade" id="predictModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #e94560;">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold text-uppercase">Đặt Cược Trận Đấu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p id="predictMatchTitle" class="fw-bold fs-5 mb-3 text-warning"></p>
+                <div class="alert alert-info py-2" id="oddsText" style="background-color: #0f3460; color: #7fdbff; border: 1px solid #1a1a2e; font-size: 0.9rem;"></div>
+                
+                <input type="hidden" id="predictMatchId">
+                <div class="d-flex justify-content-center gap-3 mb-4 mt-3">
+                    <button class="btn prediction-btn px-4 py-2" id="btnHome" onclick="selectTeam(this)"></button>
+                    <button class="btn prediction-btn px-4 py-2" id="btnAway" onclick="selectTeam(this)"></button>
+                </div>
+                
+                <button class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow mt-2" onclick="submitPrediction()">Xác Nhận Đặt Cược</button>
+
+                <div id="luckyStarContainer" class="form-check text-start mt-3 mb-3" style="width: max-content; margin: 0 auto; display:none">
+                    <input class="form-check-input" type="checkbox" id="luckyStar">
+                    <label class="form-check-label text-warning fw-bold" for="luckyStar">
+                        🌟 Sử dụng Ngôi Sao May Mắn (+/- 300k)
+                    </label>
+                </div>
+
+                <hr class="border-secondary mt-4">
+                <h6 class="text-start text-muted text-uppercase mb-3" style="font-size: 0.8rem;">Dự đoán của những người chơi khác</h6>
+                <ul class="list-group list-group-flush text-start shadow-sm" id="otherPredictionsList" style="background: transparent; border-radius: 8px;">
+                    <!-- Predictions here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaderboard Modal -->
+<div class="modal fade" id="leaderboardModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #0f3460;">
+            <div class="modal-header border-bottom border-warning">
+                <h5 class="modal-title fw-bold">🏆 Bảng Xếp Hạng Cao Thủ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="table-dark">
+                            <tr class="text-warning text-uppercase small">
+                                <th class="ps-3">#</th>
+                                <th>Người Chơi</th>
+                                <th class="text-center">Dự Đoán</th>
+                                <th class="text-end pe-3" style="cursor:pointer" onclick="toggleSortLeaderboard()">💸 Thiệt Hại <span id="sortDir">▼</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+        window.location.href = '/';
+    }
+    
+    let selectedTeamValue = "";
+
+    function showMsg(message, title = "System Notification", callback = null) {
+        $("#dialog-text").text(message);
+        $("#dialog-msg").dialog({
+            title: title,
+            modal: true,
+            width: 350,
+            buttons: {
+                "OK": function() {
+                    $(this).dialog("close");
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
+    function setupAjaxAuth() {
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        setupAjaxAuth();
+        checkUser();
+        loadMatches();
+        setInterval(loadMatches, 30000); // refresh every 30s
+    });
+
+    function formatUserDisplay(fullName, email) {
+        if (!email) return "Unknown";
+        let prefix = email.split('@')[0];
+        if (fullName) return `${fullName} (${prefix})`;
+        return prefix;
+    }
+
+    function checkUser() {
+        $.get('/api/auth/me', function(user) {
+            if (user.is_admin) $('#adminLink').show();
+            $('#userInfo').text(formatUserDisplay(user.full_name, user.email));
+        }).fail(() => logout());
+
+        $.get('/api/admin/active-year', function(data) {
+            $('#navYear').text("World Cup " + data.year);
+            $('#pageTitle').text("WC " + data.year + " - Betting");
+        });
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+    }
+
+    function loadMatches() {
+        $.get('/api/matches', function(data) {
+            let containers = {
+                'groups': $('#container-groups'),
+                '32': $('#container-32'),
+                '16': $('#container-16'),
+                'quarter': $('#container-quarter'),
+                'semi': $('#container-semi'),
+                'third': $('#container-third'),
+                'final': $('#container-final')
+            };
+            Object.values(containers).forEach(c => c.empty());
+            
+            let groupStagesDict = {};
+            
+            data.forEach(m => {
+                let badgeClass = '';
+                if (m.status === 'LIVE') badgeClass = 'badge-live';
+                else if (m.status === 'READY') badgeClass = 'badge-ready';
+                else if (m.status === 'FINISHED') badgeClass = 'badge-finished';
+                else badgeClass = 'badge-scheduled';
+
+                let scoreText = (m.status === 'READY' || m.status === 'SCHEDULED') ? 'VS' : `${m.home_score} - ${m.away_score}`;
+                let timeStr = new Date(m.start_time).toLocaleString('vi-VN', { 
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+                });
+                
+                let oddsDisplay = m.odds ? `<div class="mt-2"><span class="badge bg-dark border border-warning text-warning fw-normal">Kèo: ${m.odds.favorite_team} chấp ${m.odds.handicap}</span></div>` : '';
+
+                let html = `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card match-card p-3 h-100 text-center" onclick='openPredictionModal(${JSON.stringify(m)})'>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge ${badgeClass} text-uppercase small" style="font-size: 0.7rem;">${m.status}</span>
+                            <div class="text-end">
+                                <small class="text-warning d-block fw-bold" style="font-size: 0.75rem;">${m.stadium}</small>
+                                <small class="text-light opacity-50" style="font-size: 0.7rem;">${timeStr}</small>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                             <div class="d-flex align-items-center justify-content-center gap-2">
+                                <img src="${m.home_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
+                                <span class="fw-bold">${m.home_team_vn || m.home_team}</span>
+                            </div>
+                            <div class="fw-bold fs-3 text-danger my-1">${scoreText}</div>
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <img src="${m.away_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
+                                <span class="fw-bold">${m.away_team_vn || m.away_team}</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">${oddsDisplay}</div>
+                        ${m.locked ? '<div class="mt-2 text-secondary"><small>🔒 Locked</small></div>' : ''}
+                    </div>
+                </div>`;
+                
+                let s = (m.stage || "").toLowerCase();
+                if (s.includes("vòng 32")) { containers['32'].append(html); }
+                else if (s.includes("vòng 16") || s.includes("round of 16")) { containers['16'].append(html); }
+                else if (s.includes("tứ kết") || s.includes("quarter")) { containers['quarter'].append(html); }
+                else if (s.includes("bán kết") || s.includes("semi")) { containers['semi'].append(html); }
+                else if (s.includes("hạng 3") || s.includes("third")) { containers['third'].append(html); }
+                else if (s.includes("chung kết") || s.includes("final")) { containers['final'].append(html); }
+                else {
+                    if (!groupStagesDict[m.stage]) { groupStagesDict[m.stage] = ""; }
+                    groupStagesDict[m.stage] += html;
+                }
+            });
+
+            // Append Group Stages by table
+            Object.keys(groupStagesDict).sort().forEach(g => {
+                containers['groups'].append(`<div class="col-12 mt-4 mb-2"><h5 class="text-warning border-start border-warning border-4 ps-2 text-start text-uppercase small fw-bold">${g.replace('Group', 'Bảng')}</h5></div>`);
+                containers['groups'].append(groupStagesDict[g]);
+            });
+
+        }).fail(function(err) {
+            if(err.status === 401) logout();
+        });
+    }
+
+    function openPredictionModal(match) {
+        $('#predictMatchId').val(match.id);
+        const name1 = match.home_team_vn || match.home_team;
+        const name2 = match.away_team_vn || match.away_team;
+        $('#predictMatchTitle').text(`${name1} vs ${name2}`);
+        
+        selectedTeamValue = ""; // reset
+        $('#btnHome').html(`<img src="${match.home_team_flag}" class="me-2" style="width:20px"> ${name1}`).removeClass('active');
+        $('#btnAway').html(`<img src="${match.away_team_flag}" class="me-2" style="width:20px"> ${name2}`).removeClass('active');
+        
+        let drawBtn = $('#btnDraw');
+        if (!drawBtn.length) {
+            $('#btnAway').after('<button class="btn prediction-btn px-4 py-2" id="btnDraw" onclick="selectTeam(this)">Hòa</button>');
+            drawBtn = $('#btnDraw');
+        }
+        drawBtn.removeClass('active');
+
+        if (match.odds && Number.isInteger(match.odds.handicap)) {
+            drawBtn.show();
+        } else {
+            drawBtn.hide();
+        }
+        
+        let odds = match.odds;
+        if(odds) {
+            $('#oddsText').html(`<strong>${odds.favorite_team} chấp ${odds.handicap}</strong><br><small class="opacity-75">${odds.analysis_text}</small>`);
+        } else {
+            $('#oddsText').html('Chưa có kèo / AI đang phân tích.');
+        }
+
+        let isLocked = match.locked || match.status !== 'READY';
+        $('#btnHome, #btnAway, #btnDraw, #luckyStar, .btn-primary').prop('disabled', isLocked);
+        
+        if (match.lucky_star_enabled && match.status === 'READY') {
+            $('#luckyStarContainer').show();
+        } else {
+            $('#luckyStarContainer').hide();
+        }
+        
+        loadOtherPredictions(match.id);
+        var modal = new bootstrap.Modal(document.getElementById('predictModal'));
+        modal.show();
+    }
+
+    function selectTeam(btn) {
+        $('.prediction-btn').removeClass('active');
+        $(btn).addClass('active');
+        if ($(btn).attr('id') === 'btnDraw') {
+            selectedTeamValue = "Hòa";
+        } else {
+            let homeName = $('#predictMatchTitle').text().split(' vs ')[0];
+            let awayName = $('#predictMatchTitle').text().split(' vs ')[1];
+            selectedTeamValue = ($(btn).attr('id') === 'btnHome') ? homeName : awayName;
+        }
+    }
+
+    function submitPrediction() {
+        if (!selectedTeamValue) return showMsg('Vui lòng chọn 1 lựa chọn trước khi lưu!', 'Thông báo');
+        
+        let payload = {
+            match_id: parseInt($('#predictMatchId').val()),
+            chosen_team: selectedTeamValue,
+            use_lucky_star: $('#luckyStar').is(':checked')
+        };
+        
+        $.ajax({
+            url: "/api/predictions", type: "POST",
+            contentType: "application/json", data: JSON.stringify(payload),
+            success: function(res) {
+                showMsg('Dự đoán của bạn đã được ghi nhận!', 'Thành công', () => {
+                   bootstrap.Modal.getInstance(document.getElementById('predictModal')).hide();
+                   loadMatches();
+                });
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Không thể lưu dự đoán", 'Lỗi');
+            }
+        });
+    }
+
+    function loadOtherPredictions(matchId) {
+        $.get(`/api/predictions/match/${matchId}`, function(data) {
+            let list = $('#otherPredictionsList');
+            list.empty();
+            if(data.length === 0) list.append('<li class="list-group-item text-secondary bg-transparent border-secondary text-center small opacity-50">Chưa có ai dự đoán trận này</li>');
+            
+            data.forEach(p => {
+                let badgeMe = p.is_me ? '<span class="badge bg-primary ms-1" style="font-size:0.6rem">BẠN</span>' : '';
+                let star = p.use_lucky_star ? '🌟' : '';
+                let displayName = formatUserDisplay(p.user_full_name, p.user_email);
+                
+                let item = `<li class="list-group-item bg-transparent border-secondary border-opacity-25 text-light d-flex justify-content-between align-items-center py-2">
+                    <span class="small">${displayName}${badgeMe}</span>
+                    <span class="text-info fw-bold small">${p.chosen_team} ${star}</span>
+                </li>`;
+                list.append(item);
+                
+                if (p.is_me) {
+                    if ($('#btnHome').text().trim() === p.chosen_team) { selectTeam(document.getElementById('btnHome')); }
+                    else if ($('#btnAway').text().trim() === p.chosen_team) { selectTeam(document.getElementById('btnAway')); }
+                    else if (p.chosen_team === "Hòa") { selectTeam(document.getElementById('btnDraw')); }
+                    $('#luckyStar').prop('checked', p.use_lucky_star);
+                }
+            });
+        });
+    }
+
+    let leaderboardData = [];
+    let sortAsc = false;
+
+    function loadLeaderboard() {
+        $.get('/api/leaderboard', function(data) {
+            leaderboardData = data;
+            renderLeaderboard();
+        });
+    }
+
+    function toggleSortLeaderboard() {
+        sortAsc = !sortAsc;
+        $('#sortDir').text(sortAsc ? '▲' : '▼');
+        renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+        let sorted = [...leaderboardData].sort((a, b) => {
+            return sortAsc ? (a.money_lost - b.money_lost) : (b.money_lost - a.money_lost);
+        });
+
+        let body = $('#leaderboardBody');
+        body.empty();
+        sorted.forEach((u, index) => {
+            let displayName = formatUserDisplay(u.full_name, u.email);
+            body.append(`
+                <tr class="${index < 3 ? 'table-active' : ''}">
+                    <td class="ps-3">${index + 1}</td>
+                    <td class="fw-bold text-info">${displayName}</td>
+                    <td class="text-center">
+                        <span class="text-success fw-bold">${u.total_correct}</span> <small class="opacity-50 mx-1">/</small> 
+                        <span class="text-danger">${u.total_wrong}</span>
+                    </td>
+                    <td class="text-end pe-3 text-warning fw-bold">-${u.money_lost.toLocaleString()}</td>
+                </tr>
+            `);
+        });
+    }
+</script>
+</body>
+</html>

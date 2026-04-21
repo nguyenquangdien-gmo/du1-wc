@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WC 2026 - Cài đặt</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <style>
+        body { background-color: #1a1a2e; color: white; font-family: 'Outfit', sans-serif; }
+        .navbar { background-color: #0f3460; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); border-bottom: 2px solid #e94560; }
+        .card { background-color: #16213e; border: 1px solid #0f3460; border-radius: 12px; color: white !important; }
+        .table { color: #e0e0e0; border-color: #2a5298; }
+        .table thead { background-color: #0f3460; color: #e94560; }
+        .badge-ready { background-color: #0d6efd; }
+        .badge-live { background-color: #dc3545; }
+        .badge-scheduled { background-color: #6c757d; }
+        .badge-finished { background-color: #212529; border: 1px solid #444; }
+        
+        .form-label { color: #ffffff !important; opacity: 1 !important; }
+
+        /* Custom jQuery UI Dialog Styles */
+        .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 1100 !important; }
+        .ui-dialog-titlebar { background: #0f3460 !important; border: none !important; color: #e94560 !important; font-weight: bold !important; padding: 12px 20px !important; }
+        .ui-dialog-content { padding: 20px !important; font-size: 1rem !important; color: #e0e0e0 !important; }
+        .ui-dialog-buttonpane { background: #0f3460 !important; border-top: 1px solid #2a5298 !important; padding: 10px 20px !important; }
+        .ui-button { background: #e94560 !important; color: white !important; border: none !important; border-radius: 6px !important; padding: 6px 20px !important; font-weight: 600 !important; }
+        .ui-button:hover { background: #d1304b !important; }
+        .ui-dialog-titlebar-close { display: none !important; }
+        .ui-widget-overlay { background: rgba(0,0,0,0.7) !important; opacity: 1 !important; }
+        
+        .ui-autocomplete { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; max-height: 200px; overflow-y: auto; overflow-x: hidden; z-index: 2000 !important; }
+        .ui-menu-item-wrapper:hover { background-color: #e94560 !important; color: white !important; }
+
+        /* Table & UI Fixes */
+        .table { --bs-table-color: #e0e0e0 !important; --bs-table-bg: #1a1a2e !important; border-color: #2d2d44 !important; }
+        .table td { color: #e0e0e0 !important; font-size: 0.95rem; }
+        .table thead th { color: #e94560 !important; font-weight: 700; border-bottom: 2px solid #2a5298 !important; }
+        .text-muted { color: #8a8da3 !important; }
+
+        /* Bootstrap Tab Fix */
+        .nav-tabs .nav-link { border-radius: 8px !important; margin-right: 5px; border: none !important; transition: all 0.3s; }
+        .nav-tabs .nav-link.active { background-color: #e94560 !important; color: white !important; font-weight: bold; box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4); }
+        .nav-tabs .nav-link:hover:not(.active) { background: rgba(233, 69, 96, 0.2); }
+    </style>
+</head>
+<body>
+
+<div id="dialog-msg" title="Notification" style="display:none">
+  <p id="dialog-text"></p>
+</div>
+
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 Trang Cài đặt</a>
+        <a href="/static/dashboard.html" class="btn btn-outline-light btn-sm ms-2">Home</a>
+        <div class="d-flex align-items-center">
+            <span id="userInfo" class="me-3 text-info small"></span>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<!-- Stadium Modal -->
+<div class="modal fade" id="stadiumModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="stadiumModalTitle">Sân vận động</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editStadiumId">
+                <div class="mb-3">
+                    <label class="form-label">Tên sân vận động</label>
+                    <input type="text" id="stadiumName" class="form-control bg-dark text-white border-secondary">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Thành phố (Tùy chọn)</label>
+                    <input type="text" id="stadiumCity" class="form-control bg-dark text-white border-secondary">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Quốc gia (Tùy chọn)</label>
+                    <input type="text" id="stadiumCountry" class="form-control bg-dark text-white border-secondary">
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveStadium()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-uppercase fw-bold letter-spacing-1">Cài Đặt Hệ Thống</h3>
+    </div>
+
+    <ul class="nav nav-tabs mb-4 border-0" id="adminTabs" role="tablist" style="background: rgba(15, 52, 96, 0.5); padding: 5px; border-radius: 8px;">
+        <li class="nav-item">
+            <button class="nav-link active text-white" id="matches-tab" data-bs-toggle="tab" data-bs-target="#tab-matches">Trận đấu</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-white" id="users-tab" data-bs-toggle="tab" data-bs-target="#tab-users">Người dùng</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-white" id="countries-tab" data-bs-toggle="tab" data-bs-target="#tab-countries">Quốc gia (VN)</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-white" id="stadiums-tab" data-bs-toggle="tab" data-bs-target="#tab-stadiums">Sân vận động</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-white" id="settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings">Cấu hình chung</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="adminTabContent">
+        <!-- Matches Tab -->
+         <div class="tab-pane fade show active" id="tab-matches" role="tabpanel">
+            <div class="card shadow-lg border-0 mb-4">
+                <div class="card-header bg-dark d-flex justify-content-between align-items-center py-3 border-secondary">
+                    <h5 class="mb-0 text-uppercase fw-bold text-info" id="matchYearLabel">World Cup 2026</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-info text-white" onclick="openImportModal()">Import File</button>
+                        <button class="btn btn-sm btn-outline-danger" id="btnDeleteYear" onclick="deleteYear()">Xóa năm hiện tại</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-dark mb-0 align-middle">
+                            <thead>
+                                <tr class="text-uppercase small">
+                                    <th class="ps-3">#</th>
+                                    <th>Vòng đấu</th>
+                                    <th>Trận đấu</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thời gian</th>
+                                    <th>Lucky Star</th>
+                                    <th class="pe-3">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matchList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-pane fade" id="tab-users" role="tabpanel">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-dark align-middle">
+                            <thead>
+                                <tr class="text-warning small text-uppercase">
+                                    <th>Email</th>
+                                    <th>Họ tên</th>
+                                    <th class="text-center">Kích hoạt</th>
+                                    <th class="text-center">Admin</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Countries Tab -->
+        <div class="tab-pane fade" id="tab-countries" role="tabpanel">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-dark align-middle">
+                            <thead>
+                                <tr class="text-warning small text-uppercase">
+                                    <th>Mã</th>
+                                    <th>Tên gốc</th>
+                                    <th>Tên Tiếng Việt</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="countryList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stadiums Tab -->
+        <div class="tab-pane fade" id="tab-stadiums" role="tabpanel">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h6 class="text-info fw-bold mb-0">Danh sách sân vận động</h6>
+                        <button class="btn btn-sm btn-success" onclick="openStadiumModal()">Thêm mới</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-dark align-middle">
+                            <thead>
+                                <tr class="text-warning small text-uppercase">
+                                    <th>ID</th>
+                                    <th>Tên sân</th>
+                                    <th>Thành phố</th>
+                                    <th>Quốc gia</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stadiumList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-pane fade" id="tab-settings" role="tabpanel">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <form id="settingsForm">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-warning fw-bold">Tiền phạt mỗi trận thua (VNĐ)</label>
+                                <input type="number" class="form-control bg-dark text-white border-secondary" id="setPenalty">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-warning fw-bold">Tiền cược Ngôi sao may mắn (VNĐ)</label>
+                                <input type="number" class="form-control bg-dark text-white border-secondary" id="setLuckyAmount">
+                            </div>
+                            
+                            <div class="col-12 mt-4 border-top border-secondary pt-4">
+                                <h6 class="text-white mb-3">Quản lý Batch tự động</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-bordered align-middle mb-0">
+                                        <thead>
+                                            <tr class="text-warning small text-uppercase" style="background-color: #1a1a2e;">
+                                                <th style="min-width: 180px;">Batch & Mô tả</th>
+                                                <th style="width: 100px;">Chu kỳ (p)</th>
+                                                <th style="width: 120px;">Giờ bắt đầu</th>
+                                                <th class="text-center">Trạng thái</th>
+                                                <th class="text-end">Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <span class="text-info fw-bold">Tự động chốt dự đoán</span><br/>
+                                                    <small class="text-muted">Gán đội yêu thích cho những người dùng quên dự đoán trước trận.</small>
+                                                </td>
+                                                <td><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" id="setPredictInterval"></td>
+                                                <td><input type="time" class="form-control form-control-sm bg-dark text-white border-secondary" id="setPredictStartTime"></td>
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input" type="checkbox" id="setPredictEnabled">
+                                                    </div>
+                                                </td>
+                                                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-warning" onclick="runBatch('predict', this)">Chạy ngay</button></td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <span class="text-info fw-bold">Cập nhật tỉ số trực tiếp</span><br/>
+                                                    <small class="text-muted">Theo dõi diễn biến trận đấu, cập nhật kết quả và quyết toán tiền.</small>
+                                                </td>
+                                                <td><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" id="setLiveInterval"></td>
+                                                <td><input type="time" class="form-control form-control-sm bg-dark text-white border-secondary" id="setLiveStartTime"></td>
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input" type="checkbox" id="setLiveEnabled">
+                                                    </div>
+                                                </td>
+                                                <td class="text-end"><button type="button" class="btn btn-sm btn-outline-warning" onclick="runBatch('live', this)">Chạy ngay</button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-4">
+                                <button type="button" class="btn btn-primary px-5" onclick="saveSettings()">Lưu cấu hình</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Import lịch thi đấu từ File</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Năm World Cup</label>
+                    <input type="number" id="importYear" class="form-control bg-dark text-white border-secondary" value="2026" step="4">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Chọn file dữ liệu (HTML hoặc TEXT)</label>
+                    <input type="file" id="importFile" class="form-control bg-dark text-white border-secondary" accept=".txt,.html">
+                    <div class="form-text text-muted small">AI sẽ tự động đọc nội dung file để trích xuất danh sách trận đấu.</div>
+                </div>
+                <div id="importLoading" class="text-center d-none">
+                    <div class="spinner-border text-info" role="status"></div>
+                    <p class="mt-2 text-info">AI đang trích xuất dữ liệu, vui lòng đợi...</p>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-info text-white" id="btnDoImport" onclick="uploadMatchFile()">Bắt đầu Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Match Modal -->
+<div class="modal fade" id="editMatchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #e94560;">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold">Chi Tiết Trận Đấu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editMatchForm">
+                    <input type="hidden" id="editMid">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small text-uppercase fw-bold">Đội 1</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="editHome">
+                            <input type="hidden" id="editHomeCode">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-uppercase fw-bold">Đội 2</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="editAway">
+                            <input type="hidden" id="editAwayCode">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Trạng thái</label>
+                            <select class="form-select bg-dark text-white border-secondary" id="editStatus">
+                                <option value="SCHEDULED">SCHEDULED</option>
+                                <option value="READY">READY</option>
+                                <option value="LIVE">LIVE</option>
+                                <option value="FINISHED">FINISHED</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small text-uppercase fw-bold">Sân vận động</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="editStadium">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-uppercase fw-bold">Thời gian</label>
+                            <input type="datetime-local" class="form-control bg-dark text-white border-secondary" id="editTime">
+                        </div>
+                        <div class="col-md-6 pt-4">
+                            <div class="form-check pt-2">
+                                <input class="form-check-input" type="checkbox" id="editLuckyEnabled">
+                                <label class="form-check-label text-warning fw-bold" for="editLuckyEnabled">
+                                    🌟 Cho phép Lucky Star
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Tỷ số thực tế -->
+                        <div class="col-md-3">
+                            <label class="form-label small text-uppercase fw-bold">Tỷ số Đội 1</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" id="editHomeScore" placeholder="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-uppercase fw-bold">Tỷ số Đội 2</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" id="editAwayScore" placeholder="0">
+                        </div>
+
+                        <div class="col-12 mt-4 d-flex justify-content-between align-items-center border-bottom border-secondary pb-2">
+                            <h6 class="mb-0 text-info fw-bold">Kèo & AI Phân Tích</h6>
+                            <button type="button" class="btn btn-sm btn-warning fw-bold" onclick="generateAI()">✨ AI Phân tích</button>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Đội Cửa Trên</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="editFav">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Đội Cửa Dưới</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="editUnderdog">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-uppercase fw-bold">Chấp (Handicap)</label>
+                            <input type="number" step="0.5" class="form-control bg-dark text-white border-secondary" id="editHandicap">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-uppercase fw-bold">Nội dung phân tích</label>
+                            <textarea class="form-control bg-dark text-white border-secondary" id="editAnalysis" rows="3"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveMatch()">Lưu Thay Đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/';
+
+    let countries = [];
+    let stadiums = [];
+
+    function showMsg(message, title = "Hệ thống", callback = null) {
+        $("#dialog-text").text(message);
+        $("#dialog-msg").dialog({
+            title: title,
+            modal: true,
+            width: 350,
+            buttons: {
+                "Đóng": function() {
+                    $(this).dialog("close");
+                    if (callback) callback();
+                }
+            }
+        });
+    }
+
+    function showConfirm(message, title = "Xác nhận", callback = null) {
+        $("#dialog-text").text(message);
+        $("#dialog-msg").dialog({
+            title: title,
+            modal: true,
+            width: 350,
+            buttons: {
+                "Đồng ý": function() {
+                    $(this).dialog("close");
+                    if (callback) callback();
+                },
+                "Hủy": function() {
+                    $(this).dialog("close");
+                }
+            }
+        });
+    }
+
+    function setupAjax() {
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        setupAjax();
+        checkAdmin();
+        
+        // Tab switching events
+        $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            let target = $(e.target).attr("data-bs-target");
+            if (target === '#tab-matches') loadMatches();
+            if (target === '#tab-users') loadUsers();
+            if (target === '#tab-countries') loadCountriesAdmin();
+            if (target === '#tab-stadiums') loadStadiumsAdmin();
+            if (target === '#tab-settings') loadSettings();
+        });
+
+        loadMatches(); // default
+        loadCommonData();
+        getCurrentYear();
+    });
+
+    function loadCommonData() {
+        $.get('/api/countries', function(data) {
+            // data now has {code, name, name_vn}
+            countries = data.map(c => ({ 
+                label: `[${c.code.toUpperCase()}] ${c.name}${c.name_vn ? ' ('+c.name_vn+')' : ''}`, 
+                value: c.name_vn || c.name, 
+                code: c.code,
+                name: c.name,
+                name_vn: c.name_vn
+            }));
+            setupAutocompletes();
+        });
+    }
+
+    function setupAutocompletes() {
+        const countrySource = (request, response) => {
+            const term = request.term.toLowerCase();
+            const filtered = countries.filter(c => 
+                c.code.toLowerCase().includes(term) || 
+                c.name.toLowerCase().includes(term) || 
+                (c.name_vn && c.name_vn.toLowerCase().includes(term))
+            );
+            response(filtered);
+        };
+
+        $("#editHome").autocomplete({
+            source: countrySource,
+            select: (e, ui) => {
+                $('#editHomeCode').val(ui.item.code);
+            }
+        });
+        $("#editAway").autocomplete({
+            source: countrySource,
+            select: (e, ui) => {
+                $('#editAwayCode').val(ui.item.code);
+            }
+        });
+
+        // For other fields that only need the name
+        let teamNames = countries.map(c => c.value);
+        $("#editFav, #editUnderdog").autocomplete({ source: teamNames });
+        $("#editStadium").autocomplete({ source: stadiums });
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+    }
+
+    function checkAdmin() {
+        $.get('/api/auth/me', function(user) {
+            let prefix = user.email.split('@')[0];
+            let display = (user.full_name || prefix) + " (Admin)";
+            $('#userInfo').text(display);
+            if (!user.is_admin) {
+                showMsg("Bạn không có quyền truy cập trang này!", "Cảnh báo", () => {
+                   window.location.href = '/static/dashboard.html';
+                });
+            }
+        }).fail(() => logout());
+    }
+
+    function loadMatches() {
+        $.get('/api/matches', function(data) {
+            let list = $('#matchList');
+            list.empty();
+            
+            // Collect unique stadiums for autocomplete
+            stadiums = [...new Set(data.map(m => m.stadium))];
+            setupAutocompletes();
+
+            data.sort((a,b) => a.match_no - b.match_no).forEach(m => {
+                let badge = '';
+                if(m.status === 'READY') badge = '<span class="badge badge-ready">READY</span>';
+                else if(m.status === 'LIVE') badge = '<span class="badge badge-live">LIVE</span>';
+                else if(m.status === 'FINISHED') badge = '<span class="badge badge-finished">FINISHED</span>';
+                else badge = '<span class="badge badge-scheduled">SCHEDULED</span>';
+
+                let star = m.lucky_star_enabled ? '🌟' : '';
+                let time = new Date(m.start_time).toLocaleString();
+
+                list.append(`
+                    <tr>
+                        <td class="ps-3">${m.match_no}</td>
+                        <td class="small text-muted">${m.stage}</td>
+                        <td><strong>${m.home_team}</strong> vs <strong>${m.away_team}</strong></td>
+                        <td>${badge}</td>
+                        <td class="small">${time}</td>
+                        <td class="text-center">${star}</td>
+                        <td class="pe-3">
+                            <button class="btn btn-sm btn-outline-info" onclick='openEditModal(${JSON.stringify(m)})'>Sửa</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        });
+    }
+
+    function openEditModal(m) {
+        $('#editMid').val(m.id);
+        $('#editHome').val(m.home_team);
+        $('#editHomeCode').val(m.home_team_code || "");
+        $('#editAway').val(m.away_team);
+        $('#editAwayCode').val(m.away_team_code || "");
+        $('#editStatus').val(m.status);
+        $('#editStadium').val(m.stadium);
+        $('#editLuckyEnabled').prop('checked', m.lucky_star_enabled);
+        
+        let dateObj = new Date(m.start_time);
+        let localISO = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        $('#editTime').val(localISO);
+        
+        $('#editHomeScore').val(m.home_score !== null ? m.home_score : '');
+        $('#editAwayScore').val(m.away_score !== null ? m.away_score : '');
+
+        if(m.odds) {
+            $('#editFav').val(m.odds.favorite_team);
+            $('#editUnderdog').val(m.odds.underdog_team);
+            $('#editHandicap').val(m.odds.handicap);
+            $('#editAnalysis').val(m.odds.analysis_text);
+        } else {
+            $('#editFav, #editUnderdog, #editHandicap, #editAnalysis').val('');
+        }
+
+        new bootstrap.Modal(document.getElementById('editMatchModal')).show();
+    }
+
+    function generateAI() {
+        let mid = $('#editMid').val();
+        let btn = $('.btn-warning');
+        btn.prop('disabled', true).text('Đang phân tích...');
+        
+        $.ajax({
+            url: `/api/admin/matches/${mid}/generate-ai`,
+            type: 'POST',
+            success: function(data) {
+                $('#editFav').val(data.favorite_team);
+                $('#editUnderdog').val(data.underdog_team);
+                $('#editHandicap').val(data.handicap);
+                $('#editAnalysis').val(data.analysis_text);
+                
+                // New: AI predictive filling
+                if (data.predicted_team1) $('#editHome').val(data.predicted_team1);
+                if (data.predicted_team2) $('#editAway').val(data.predicted_team2);
+                if (data.predicted_stadium) $('#editStadium').val(data.predicted_stadium);
+
+                showMsg('AI đã phân tích xong. Vui lòng kiểm tra và nhấn Save để lưu.', 'AI Thành công');
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "AI Phân tích thất bại", 'Lỗi AI');
+            },
+            complete: function() {
+                btn.prop('disabled', false).text('✨ AI Phân tích');
+            }
+        });
+    }
+
+    function saveMatch() {
+        let mid = $('#editMid').val();
+        let payload = {
+            home_team: $('#editHome').val(),
+            home_team_code: $('#editHomeCode').val(),
+            away_team: $('#editAway').val(),
+            away_team_code: $('#editAwayCode').val(),
+            status: $('#editStatus').val(),
+            stadium: $('#editStadium').val(),
+            start_time: $('#editTime').val(),
+            lucky_star_enabled: $('#editLuckyEnabled').is(':checked'),
+            home_score: $('#editHomeScore').val() !== '' ? parseInt($('#editHomeScore').val()) : null,
+            away_score: $('#editAwayScore').val() !== '' ? parseInt($('#editAwayScore').val()) : null,
+            odds_favorite_team: $('#editFav').val(),
+            odds_underdog_team: $('#editUnderdog').val(),
+            odds_handicap: parseFloat($('#editHandicap').val()) || 0,
+            odds_analysis_text: $('#editAnalysis').val()
+        };
+
+        $.ajax({
+            url: `/api/admin/matches/${mid}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function() {
+                showMsg('Cập nhật trận đấu thành công!', 'Thành công', () => {
+                   bootstrap.Modal.getInstance(document.getElementById('editMatchModal')).hide();
+                   loadMatches();
+                });
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Update failed", 'Lỗi');
+            }
+        });
+    }
+
+    // --- USERS MANAGEMENT ---
+    function loadUsers() {
+        $.get('/api/admin/users', function(data) {
+            let list = $('#userList');
+            list.empty();
+            data.forEach(u => {
+                list.append(`
+                    <tr>
+                        <td>${u.email}</td>
+                        <td>${u.full_name || '-'}</td>
+                        <td class="text-center">
+                            <input type="checkbox" ${u.is_active ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_active', this.checked)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" ${u.is_admin ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_admin', this.checked)">
+                        </td>
+                        <td class="text-end"></td>
+                    </tr>
+                `);
+            });
+        });
+    }
+
+    function updateUser(id, field, val) {
+        let payload = {}; payload[field] = val;
+        $.ajax({
+            url: `/api/admin/users/${id}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: () => showMsg("Cập nhật người dùng thành công")
+        });
+    }
+
+    // --- COUNTRIES MANAGEMENT ---
+    function loadCountriesAdmin() {
+        $.get('/api/admin/countries', function(data) {
+            let list = $('#countryList');
+            list.empty();
+            data.sort((a,b) => a.name.localeCompare(b.name)).forEach(c => {
+                list.append(`
+                    <tr>
+                        <td><code>${c.code}</code></td>
+                        <td>${c.name}</td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary w-75" 
+                                   value="${c.name_vn || ''}" onchange="updateCountry('${c.code}', this.value)">
+                        </td>
+                        <td><img src="${c.flag_data}" style="width:24px"></td>
+                    </tr>
+                `);
+            });
+        });
+    }
+
+    function updateCountry(code, val) {
+        $.ajax({
+            url: `/api/admin/countries/${code}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name_vn: val }),
+            success: () => showMsg("Đã cập nhật tên tiếng Việt")
+        });
+    }
+
+    // --- STADIUMS MANAGEMENT ---
+    function loadStadiumsAdmin() {
+        $.get('/api/admin/stadiums', function(data) {
+            let list = $('#stadiumList');
+            list.empty();
+            data.forEach(s => {
+                list.append(`
+                    <tr>
+                        <td>${s.id}</td>
+                        <td class="text-info fw-bold">${s.name}</td>
+                        <td>${s.city || '<i class="text-muted small">Chưa cập nhật</i>'}</td>
+                        <td>${s.country || '<i class="text-muted small">Chưa cập nhật</i>'}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-info me-1" onclick="openStadiumModal(${s.id}, '${s.name.replace(/'/g, "\\'")}', '${(s.city || '').replace(/'/g, "\\'")}', '${(s.country || '').replace(/'/g, "\\'")}')">Sửa</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteStadium(${s.id})">Xóa</button>
+                        </td>
+                    </tr>
+                `);
+            });
+            stadiums = data.map(s => s.name);
+            setupAutocompletes();
+        });
+    }
+
+    let stadiumModal;
+    $(document).ready(function() {
+        stadiumModal = new bootstrap.Modal(document.getElementById('stadiumModal'));
+    });
+
+    function openStadiumModal(id = null, name = '', city = '', country = '') {
+        $('#editStadiumId').val(id || '');
+        $('#stadiumName').val(name);
+        $('#stadiumCity').val(city);
+        $('#stadiumCountry').val(country);
+        $('#stadiumModalTitle').text(id ? 'Cập nhật Sân vận động' : 'Thêm Sân vận động mới');
+        stadiumModal.show();
+    }
+
+    function saveStadium() {
+        let id = $('#editStadiumId').val();
+        let name = $('#stadiumName').val().trim();
+        let city = $('#stadiumCity').val().trim();
+        let country = $('#stadiumCountry').val().trim();
+        
+        if (!name) return showMsg("Vui lòng nhập tên sân!");
+        
+        let url = '/api/admin/stadiums';
+        let type = 'POST';
+        
+        if (id) {
+            url += '/' + id;
+            type = 'PUT';
+        }
+        
+        $.ajax({
+            url: url,
+            type: type,
+            contentType: 'application/json',
+            data: JSON.stringify({ name: name, city: city, country: country }),
+            success: function() {
+                stadiumModal.hide();
+                loadStadiumsAdmin();
+                showMsg(id ? "Cập nhật thành công!" : "Thêm sân thành công!");
+            }
+        });
+    }
+
+    function deleteStadium(id) {
+        showConfirm("Xóa sân vận động này?", "Xác nhận xóa", () => {
+            $.ajax({ url: `/api/admin/stadiums/${id}`, type: 'DELETE', success: () => loadStadiumsAdmin() });
+        });
+    }
+
+    // --- SETTINGS MANAGEMENT ---
+    function loadSettings() {
+        $.get('/api/admin/settings', function(data) {
+            $('#setPenalty').val(data.penalty_per_loss);
+            $('#setLuckyAmount').val(data.lucky_star_amount);
+            
+            
+            // Batch Predict
+            $('#setPredictInterval').val(data.batch_predict_interval || 1);
+            $('#setPredictEnabled').prop('checked', data.batch_predict_enabled === 'true');
+            $('#setPredictStartTime').val(data.batch_predict_start_time || data.default_prediction_time || "19:00");
+            
+            // Batch Live
+            $('#setLiveInterval').val(data.batch_live_interval || 5);
+            $('#setLiveEnabled').prop('checked', data.batch_live_enabled === 'true');
+            $('#setLiveStartTime').val(data.batch_live_start_time || "19:00");
+        });
+    }
+
+    function saveSettings() {
+        let payload = {
+            penalty_per_loss: parseInt($('#setPenalty').val()),
+            lucky_star_amount: parseInt($('#setLuckyAmount').val()),
+            
+            
+            batch_predict_interval: parseInt($('#setPredictInterval').val()),
+            batch_predict_enabled: $('#setPredictEnabled').is(':checked'),
+            batch_predict_start_time: $('#setPredictStartTime').val(),
+            default_prediction_time: $('#setPredictStartTime').val(), // Sync for backward compatibility
+            
+            batch_live_interval: parseInt($('#setLiveInterval').val()),
+            batch_live_enabled: $('#setLiveEnabled').is(':checked'),
+            batch_live_start_time: $('#setLiveStartTime').val()
+        };
+        $.ajax({
+            url: '/api/admin/settings',
+            type: 'PATCH',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: () => showMsg("Cập nhật cấu hình thành công")
+        });
+    }
+
+    function runBatch(type, btnEl) {
+        let btn = $(btnEl);
+        let originalText = btn.text();
+        btn.prop('disabled', true).text('⌛...');
+        
+        $.ajax({
+            url: `/api/admin/batch/${type}/run`,
+            type: 'POST',
+            success: function() {
+                showMsg(`Batch ${type} đã được thực thi thành công!`, 'Thành công', () => {
+                    loadMatches(); 
+                });
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Lỗi khi chạy batch", 'Lỗi');
+            },
+            complete: function() {
+                btn.prop('disabled', false).text(originalText);
+            }
+        });
+    }
+
+    async function getCurrentYear() {
+        try {
+            const res = await fetch('/api/admin/active-year');
+            const data = await res.json();
+            const year = data.year;
+            $('#matchYearLabel').text(`World Cup ${year}`);
+            $('title').text(`Admin - Quản lý World Cup ${year}`);
+        } catch (e) {}
+    }
+
+    function openImportModal() {
+        const modal = new bootstrap.Modal(document.getElementById('importModal'));
+        modal.show();
+    }
+
+    async function uploadMatchFile() {
+        const year = $('#importYear').val();
+        const fileInput = document.getElementById('importFile');
+        const file = fileInput.files[0];
+
+        if (!year || !file) {
+            return showMsg("Vui lòng nhập năm và chọn file", "Thông báo");
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('year', year);
+
+        const btn = $('#btnDoImport');
+        const loading = $('#importLoading');
+        
+        btn.prop('disabled', true);
+        loading.removeClass('d-none');
+
+        try {
+            const response = await fetch('/api/admin/years/create-from-file', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            });
+            const res = await response.json();
+            if (response.ok) {
+                showMsg(res.message, "Thành công", () => {
+                    location.reload();
+                });
+            } else {
+                showMsg("Lỗi: " + (res.detail || "Không rõ"), "Lỗi");
+            }
+        } catch (err) {
+            showMsg("Lỗi kết nối hoặc file quá lớn", "Lỗi");
+        } finally {
+            btn.prop('disabled', false);
+            loading.addClass('d-none');
+        }
+    }
+
+    async function deleteYear() {
+        const res = await fetch('/api/admin/active-year');
+        const data = await res.json();
+        const year = data.year;
+
+        if (!year) return showMsg("Không xác định được năm hiện tại", "Thông báo");
+
+        showConfirm(`Bạn có chắc muốn XÓA TOÀN BỘ dữ liệu của kỳ World Cup ${year}? Hành động này không thể hoàn tác và chỉ thực hiện được nếu chưa có trận nào diễn ra.`, "Cảnh báo nguy hiểm", async () => {
+            const btn = $('#btnDeleteYear');
+            const originalText = btn.text();
+            btn.prop('disabled', true).text('⌛...');
+
+            try {
+                const response = await fetch(`/api/admin/years/${year}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const res = await response.json();
+                if (response.ok) {
+                    showMsg(res.message, "Thành công", () => {
+                        location.reload();
+                    });
+                } else {
+                    showMsg("Lỗi: " + (res.detail || "Không rõ"), "Lỗi");
+                }
+            } catch (err) {
+                showMsg("Lỗi kết nối", "Lỗi");
+            } finally {
+                btn.prop('disabled', false).text(originalText);
+            }
+        });
+    }
+
+</script>
+</body>
+</html>
