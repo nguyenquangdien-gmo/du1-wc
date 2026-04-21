@@ -4,6 +4,8 @@ from database import SessionLocal, models
 from services.ai_service import simulate_match_live_update
 from datetime import datetime, timedelta
 import pytz
+import requests
+import json
 
 scheduler = BackgroundScheduler()
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
@@ -46,6 +48,12 @@ def init_settings():
             "batch_live_enabled": "true",
             "batch_live_start_time": "19:00",
             "active_wc_year": "2026",
+            "mattermost_enabled": "false",
+            "mattermost_url": "https://chat.runsystem.vn/api/v4/posts",
+            "mattermost_bot_token": "",
+            "mattermost_channel_id": "d97ni8o15py69pnjthuoqwc4ga",
+            "mattermost_root_id": "zsq84zw87j887n17q4xqhr5hmw",
+            "mattermost_message_template": "@all\n📢 Trận đấu sắp diễn ra!\n🏆 **{{stage}}**\n⚽ **{{home_team}}** vs **{{away_team}}**\n⏰ Bắt đầu lúc: **{{start_time}}**\n🏟️ Sân vận động: **{{stadium}}**",
         }
         for k, v in defaults.items():
             if not db.query(models.Setting).filter(models.Setting.key == k).first():
@@ -198,6 +206,77 @@ def settle_match(db: Session, match: models.Match):
     # A complete tree progression requires predefined tree structure. We'll leave it as a placeholder to be triggered.
     print(f"Settled match {match.home_team} vs {match.away_team}. Bet winner: {winning_team_bet}. Actual winner: {actual_winner}")
 
+def task_match_notifications():
+    """Run every minute to check matches starting in 30, 5, or 0 minutes"""
+    db = get_db()
+    try:
+        now_vn = datetime.now(VN_TZ)
+        
+        # Get settings
+        settings = {s.key: s.value for s in db.query(models.Setting).all()}
+        if settings.get('mattermost_enabled') != 'true':
+            return
+
+        url = settings.get('mattermost_url')
+        token = settings.get('mattermost_bot_token')
+        channel_id = settings.get('mattermost_channel_id')
+        root_id = settings.get('mattermost_root_id')
+        template = settings.get('mattermost_message_template')
+
+        if not token or not channel_id:
+            return
+
+        # Check matches that are READY or SCHEDULED
+        matches = db.query(models.Match).filter(models.Match.status.in_(["READY", "SCHEDULED"])).all()
+        
+        for m in matches:
+            m_start = VN_TZ.localize(m.start_time) if m.start_time.tzinfo is None else m.start_time.astimezone(VN_TZ)
+            diff_minutes = (m_start - now_vn).total_seconds() / 60.0
+            
+            # Cases: 30p, 5p, 0p
+            target_intervals = [
+                (30, 'notified_30m'),
+                (5, 'notified_5m'),
+                (0, 'notified_0m')
+            ]
+            
+            for wait_min, flag_attr in target_intervals:
+                # If we are within 1 minute of the target interval (and not past the 2 minute mark for safety)
+                # and flag is still False
+                if not getattr(m, flag_attr):
+                    # Trigger condition: 
+                    # For 30m: diff is between 29.0 and 31.0
+                    if wait_min - 1.0 <= diff_minutes <= wait_min + 1.0:
+                        # Format message
+                        msg = template.replace("{{stage}}", m.stage or "") \
+                                      .replace("{{home_team}}", m.home_team or "") \
+                                      .replace("{{away_team}}", m.away_team or "") \
+                                      .replace("{{start_time}}", m_start.strftime("%H:%M %d/%m/%Y")) \
+                                      .replace("{{stadium}}", m.stadium or "TBD")
+                        
+                        prefix = f"🔔 [Nhắc nhở {wait_min} phút] " if wait_min > 0 else "🔥 [TRẬN ĐẤU BẮT ĐẦU] "
+                        payload = {
+                            "message": prefix + msg,
+                            "channel_id": channel_id,
+                        }
+                        if root_id:
+                            payload["root_id"] = root_id
+                            
+                        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+                        
+                        try:
+                            resp = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
+                            if resp.status_code in [200, 201]:
+                                setattr(m, flag_attr, True)
+                                db.commit()
+                                print(f"Sent ChatOps notification for match {m.id} at {wait_min}m mark.")
+                            else:
+                                print(f"Failed to send notification: {resp.status_code} {resp.text}")
+                        except Exception as e:
+                            print(f"Error calling ChatOps API: {e}")
+    finally:
+        db.close()
+
 
 def run_batch_predict_manual():
     print(f"Manual Batch PREDICT triggered at {datetime.now(VN_TZ)}")
@@ -241,6 +320,19 @@ def sync_scheduler_settings():
             else: scheduler.pause_job('batch_live')
         else:
             scheduler.add_job(task_live_score_updater, 'interval', minutes=int(live_interval), id='batch_live', start_date=get_next_run_time(live_start_time))
+        
+        # Sync Notification Job
+        job_notify = scheduler.get_job('match_notifications')
+        mattermost_enabled = s_dict.get('mattermost_enabled', 'false') == 'true'
+        
+        if not job_notify:
+            scheduler.add_job(task_match_notifications, 'interval', minutes=1, id='match_notifications')
+            job_notify = scheduler.get_job('match_notifications')
+
+        if mattermost_enabled:
+            scheduler.resume_job('match_notifications')
+        else:
+            scheduler.pause_job('match_notifications')
         
         print("Scheduler settings synchronized with DB.")
     except Exception as e:

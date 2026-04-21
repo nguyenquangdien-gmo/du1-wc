@@ -67,6 +67,14 @@ class SettingUpdate(BaseModel):
     batch_live_enabled: Optional[bool] = None
     batch_live_start_time: Optional[str] = None
     active_wc_year: Optional[int] = None
+    
+    # ChatOps Notification Settings
+    mattermost_enabled: Optional[bool] = None
+    mattermost_url: Optional[str] = None
+    mattermost_bot_token: Optional[str] = None
+    mattermost_channel_id: Optional[str] = None
+    mattermost_root_id: Optional[str] = None
+    mattermost_message_template: Optional[str] = None
 
 class CountryUpdate(BaseModel):
     name_vn: str
@@ -107,6 +115,11 @@ class MatchResponse(BaseModel):
     home_team_vn: Optional[str] = None
     away_team_vn: Optional[str] = None
     odds: Optional[MatchOddsReponse]
+    
+    notified_30m: Optional[bool] = False
+    notified_5m: Optional[bool] = False
+    notified_0m: Optional[bool] = False
+    comment_count: int = 0
 
     class Config:
         from_attributes = True
@@ -152,3 +165,29 @@ class ChangePasswordRequest(BaseModel):
 
 class ProfileUpdate(BaseModel):
     full_name: str
+
+class CommentCreate(BaseModel):
+    content: str
+class CommentUpdate(BaseModel):
+    content: str
+
+class CommentReactionStats(BaseModel):
+    reaction_type: str
+    count: int
+    user_reacted: bool = False
+
+class CommentResponse(BaseModel):
+    id: int
+    match_id: int
+    user_id: int
+    user_full_name: Optional[str]
+    user_email_prefix: str
+    content: str
+    created_at: datetime
+    reactions: list[CommentReactionStats] = []
+
+    class Config:
+        from_attributes = True
+
+class ReactionToggle(BaseModel):
+    reaction_type: str # 👍, ❤️, 😂, 😮, 😢

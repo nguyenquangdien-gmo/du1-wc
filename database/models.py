@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from .database import Base
 from sqlalchemy import UniqueConstraint
+from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
@@ -76,6 +77,11 @@ class Match(Base):
     status = Column(String(20), default="SCHEDULED", index=True) # SCHEDULED, READY, LIVE, FINISHED
     locked = Column(Boolean, default=False)
     lucky_star_enabled = Column(Boolean, default=False)
+    
+    # Notification flags
+    notified_30m = Column(Boolean, default=False)
+    notified_5m = Column(Boolean, default=False)
+    notified_0m = Column(Boolean, default=False)
 
     odds = relationship("MatchOdds", back_populates="match", uselist=False)
     predictions = relationship("Prediction", back_populates="match")
@@ -103,3 +109,25 @@ class Prediction(Base):
 
     user = relationship("User", back_populates="predictions")
     match = relationship("Match", back_populates="predictions")
+
+class Comment(Base):
+    __tablename__ = "comments"
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(Integer, ForeignKey("matches.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User")
+    match = relationship("Match")
+    reactions = relationship("CommentReaction", back_populates="comment", cascade="all, delete-orphan")
+
+class CommentReaction(Base):
+    __tablename__ = "comment_reactions"
+    id = Column(Integer, primary_key=True, index=True)
+    comment_id = Column(Integer, ForeignKey("comments.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    reaction_type = Column(String(50)) # 👍, ❤️, 😂, 😮, 😢
+    
+    comment = relationship("Comment", back_populates="reactions")
+    user = relationship("User")

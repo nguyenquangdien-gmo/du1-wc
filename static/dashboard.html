@@ -20,6 +20,39 @@
         .prediction-btn { background-color: #0f3460; border: 1px solid #2a5298; color: white; border-radius: 8px; font-weight: 500; transition: 0.2s; }
         .prediction-btn:hover, .prediction-btn.active { background-color: #e94560; border-color: #e94560; color: white; box-shadow: 0 0 10px rgba(233, 69, 96, 0.4); }
         
+        /* Brilliant Live Match Styling */
+        .match-card-live {
+            border: 2px solid #e94560 !important;
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.4) !important;
+            animation: pulse-live 2s infinite !important;
+            transform: scale(1.02);
+            z-index: 10;
+        }
+        @keyframes pulse-live {
+            0% { box-shadow: 0 0 10px rgba(233, 69, 96, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(233, 69, 96, 0.8), 0 0 40px rgba(233, 69, 96, 0.3); }
+            100% { box-shadow: 0 0 10px rgba(233, 69, 96, 0.4); }
+        }
+        .badge-live { 
+            background-color: #e94560; 
+            box-shadow: 0 0 15px #e94560;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-live::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            display: inline-block;
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+        
         /* Modal & Dialog position fix */
         .modal-dialog { margin-top: 90px !important; }
         .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 3000 !important; top: 100px !important; }
@@ -151,26 +184,28 @@
             outline: 1px solid #e94560;
         }
 
-        /* Utility for button loading */
-        .btn-loading {
-            position: relative;
-            color: transparent !important;
-            pointer-events: none;
+        /* Comment Styles */
+        .comment-item { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .comment-user { color: #e94560; font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; }
+        .comment-content { font-size: 0.95rem; line-height: 1.4; color: #e0e0e0; white-space: pre-wrap; word-break: break-word; }
+        .comment-time { font-size: 0.75rem; color: #888; margin-top: 5px; }
+        .reaction-bar { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .reaction-btn { 
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
+            border-radius: 20px; padding: 2px 10px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;
+            color: #ccc;
         }
-        .btn-loading::after {
-            content: "";
-            position: absolute;
-            width: 1.2rem;
-            height: 1.2rem;
-            top: 50%;
-            left: 50%;
-            margin-top: -0.6rem;
-            margin-left: -0.6rem;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
+        .reaction-btn:hover { background: rgba(233, 69, 96, 0.2); border-color: #e94560; }
+        .reaction-btn.active { background: #e94560; border-color: #e94560; color: white !important; }
+        .reaction-picker { display: flex; gap: 10px; margin-top: 5px; }
+        .picker-btn { font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+        .picker-btn:hover { transform: scale(1.3); }
+
+        .btn-comment { 
+            background: transparent; color: #888; border: 1px solid #333; 
+            border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; transition: 0.2s;
         }
+        .btn-comment:hover { color: #e94560; border-color: #e94560; }
     </style>
 </head>
 <body>
@@ -180,8 +215,17 @@
     <div class="loading-text">Đang tải dữ liệu World Cup...</div>
 </div>
 
-<div id="dialog-msg" title="Notification" style="display:none">
+<div id="dialog-msg" title="Thông báo" style="display:none">
   <p id="dialog-text"></p>
+</div>
+
+<div id="dialog-confirm" title="Xác nhận" style="display:none">
+  <p id="confirm-text"></p>
+</div>
+
+<div id="dialog-prompt" title="Nhập thông tin" style="display:none">
+  <div class="mb-2" id="prompt-message"></div>
+  <textarea id="prompt-input" class="form-control bg-dark text-white border-secondary" rows="3"></textarea>
 </div>
 
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top mb-4">
@@ -200,7 +244,7 @@
         <div class="container pb-5">
             <div class="d-flex flex-column align-items-center mb-4">
                 <h3 class="text-center text-uppercase fw-bold letter-spacing-1 mb-3">Lịch Thi Đấu</h3>
-                <div class="d-flex gap-3 justify-content-center">
+                <div class="d-flex gap-4 justify-content-center">
                     <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
                         <input class="form-check-input" type="checkbox" id="showLive" onchange="loadMatches()">
                         <label class="form-check-label text-danger fw-bold ms-2" for="showLive">
@@ -348,6 +392,34 @@
     </div>
 </div>
 
+<!-- Comment Modal -->
+<div class="modal fade" id="commentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg" style="background-color: #1a1a2e; color: white; border: 1px solid #e94560;">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold">💬 BÌNH LUẬN TRẬN ĐẤU</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="commentMatchTitle" class="fw-bold fs-6 mb-3 text-warning text-center"></p>
+                
+                <!-- Comment Form -->
+                <div class="mb-4">
+                    <div class="input-group">
+                        <textarea id="commentContent" class="form-control bg-dark text-white border-secondary" placeholder="Nhập bình luận của bạn..." rows="2"></textarea>
+                        <button class="btn btn-primary" id="btnPostComment" onclick="postComment()">Gửi</button>
+                    </div>
+                </div>
+
+                <!-- Comment List -->
+                <div id="commentList" style="max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                    <!-- Comments here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -360,16 +432,77 @@
     
     let selectedTeamValue = "";
 
-    function showMsg(message, title = "System Notification", callback = null) {
-        $("#dialog-text").text(message);
+    // Giải quyết xung đột focus giữa Bootstrap Modal và jQuery UI Dialog
+    // Ngăn chặn lỗi "Maximum call stack size exceeded" và không focus được input
+    if ($.ui && $.ui.dialog) {
+        $.ui.dialog.prototype._focusTabbable = function() {};
+    }
+    
+    // Bản sửa lỗi triệt để cho Bootstrap 5 và jQuery UI
+    document.addEventListener('focusin', function (e) {
+        if (e.target.closest('.ui-dialog')) {
+            e.stopImmediatePropagation();
+        }
+    }, true);
+
+    function escapeHTML(str) {
+        if (!str) return "";
+        return str.replace(/[&<>"']/g, function(m) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[m];
+        });
+    }
+
+    function showMsg(message, title = "Thông báo", callback = null) {
+        $("#dialog-text").html(message);
         $("#dialog-msg").dialog({
-            title: title,
-            modal: true,
-            width: 350,
+            title: title, modal: true, width: 350,
+            resizable: false,
             buttons: {
-                "OK": function() {
+                "Đóng": function() {
                     $(this).dialog("close");
                     if (callback) callback();
+                }
+            }
+        });
+    }
+
+    function showConfirm(message, callback) {
+        $("#confirm-text").html(message);
+        const dialog = $("#dialog-confirm").dialog({
+            title: "Xác nhận", modal: true, width: 350,
+            resizable: false,
+            buttons: {
+                "Đồng ý": function() {
+                    $(this).dialog("close");
+                    if (callback) callback();
+                },
+                "Hủy": function() {
+                    $(this).dialog("close");
+                }
+            }
+        });
+    }
+
+    function showPrompt(message, oldContent, callback) {
+        $("#prompt-message").text(message);
+        $("#prompt-input").val(oldContent);
+        $("#dialog-prompt").dialog({
+            title: "Chỉnh sửa", modal: true, width: 400,
+            resizable: false,
+            buttons: {
+                "Lưu": function() {
+                    const val = $("#prompt-input").val();
+                    $(this).dialog("close");
+                    if (callback) callback(val);
+                },
+                "Hủy": function() {
+                    $(this).dialog("close");
                 }
             }
         });
@@ -388,6 +521,15 @@
         checkUser();
         loadMatches();
         loadLeaderboard();
+        
+        // Initialize Dialog once
+        $("#dialog-msg").dialog({
+            autoOpen: false,
+            modal: true,
+            width: 350,
+            classes: { "ui-dialog": "shadow-lg" }
+        });
+
         setInterval(() => {
             loadMatches(true);
             if ($('#leaderboardSidebar').hasClass('open')) loadLeaderboard();
@@ -459,61 +601,84 @@
                 $('#matchTabs').show();
             }
 
-            // Sắp xếp: Theo Group Name (A, B, C...) sau đó theo thời gian tăng dần
-            data.sort((a, b) => {
-                if (a.group_name && b.group_name && a.group_name !== b.group_name) {
-                    return a.group_name.localeCompare(b.group_name);
-                }
-                const stageA = (a.stage || "").toLowerCase();
-                const stageB = (b.stage || "").toLowerCase();
-                if (stageA !== stageB) return stageA.localeCompare(stageB);
-                return new Date(a.start_time) - new Date(b.start_time);
-            });
+                const matchesByGroup = {};
+                window.allMatchesMap = {}; // Global map to store match data safely
 
-            function getMatchHTML(m) {
-                let badgeClass = '';
-                if (m.status === 'LIVE') badgeClass = 'badge-live';
-                else if (m.status === 'READY') badgeClass = 'badge-ready';
-                else if (m.status === 'FINISHED') badgeClass = 'badge-finished';
-                else badgeClass = 'badge-scheduled';
-
-                let scoreText = (m.status === 'READY' || m.status === 'SCHEDULED') ? 'VS' : `${m.home_score} - ${m.away_score}`;
-                let timeStr = new Date(m.start_time).toLocaleString('vi-VN', { 
-                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+                data.forEach(m => {
+                    window.allMatchesMap[m.id] = m;
+                    const g = m.group_name || m.stage;
+                    if (!matchesByGroup[g]) matchesByGroup[g] = [];
+                    matchesByGroup[g].push(m);
                 });
                 
-                let groupInfo = m.group_name ? `Bảng ${m.group_name}` : "";
-                let oddsDisplay = m.odds ? `<div class="mt-2"><span class="badge bg-dark border border-warning text-warning fw-normal">Kèo: ${m.odds.favorite_team} chấp ${m.odds.handicap}</span></div>` : '';
+                function getMatchHTML(m) {
+                    let badgeClass = '';
+                    let statusText = m.status;
+                    let elapsedHtml = '';
+                    
+                    if (m.status === 'LIVE') {
+                        badgeClass = 'badge-live';
+                        // Calculate elapsed time
+                        const start = new Date(m.start_time);
+                        const now = new Date();
+                        const diffMs = now - start;
+                        const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+                        elapsedHtml = `<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">${diffMins}'</span>`;
+                    }
+                    else if (m.status === 'READY') badgeClass = 'badge-ready';
+                    else if (m.status === 'FINISHED') badgeClass = 'badge-finished';
+                    else badgeClass = 'badge-scheduled';
 
-                return `
-                <div class="col-md-6 col-lg-4">
-                    <div class="card match-card p-3 h-100 text-center" onclick='openPredictionModal(${JSON.stringify(m)})'>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex flex-column align-items-start">
-                                <span class="badge ${badgeClass} text-uppercase mb-1" style="font-size: 0.6rem;">${m.status}</span>
-                                ${groupInfo ? `<span class="badge bg-info text-dark fw-bold" style="font-size: 0.6rem;">${groupInfo}</span>` : ''}
+                    let scoreText = (m.status === 'READY' || m.status === 'SCHEDULED') ? 'VS' : `${m.home_score} - ${m.away_score}`;
+                    let timeStr = new Date(m.start_time).toLocaleString('vi-VN', { 
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
+                    });
+                    
+                    let groupInfo = m.group_name ? `Bảng ${m.group_name}` : "";
+                    let oddsDisplay = m.odds ? `<div class="mt-2"><span class="badge bg-dark border border-warning text-warning fw-normal">Kèo: ${m.odds.favorite_team} chấp ${m.odds.handicap}</span></div>` : '';
+
+                    let stageClass = m.status === 'LIVE' ? 'match-card-live' : '';
+                    let cCount = m.comment_count > 0 ? `<span class="badge rounded-pill bg-danger ms-1" style="font-size: 0.6rem;">${m.comment_count}</span>` : '';
+
+                    return `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card match-card ${stageClass} p-3 h-100 text-center" onclick='openPredictionModal(${m.id})'>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex flex-column align-items-start">
+                                    <div>
+                                        <span class="badge ${badgeClass} text-uppercase mb-1" style="font-size: 0.6rem;">${statusText}</span>
+                                        ${elapsedHtml}
+                                    </div>
+                                    ${groupInfo ? `<span class="badge bg-info text-dark fw-bold" style="font-size: 0.6rem;">${groupInfo}</span>` : ''}
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-warning d-block fw-bold" style="font-size: 0.75rem;">${m.stadium}</small>
+                                    <small class="text-light opacity-50" style="font-size: 0.7rem;">${timeStr}</small>
+                                </div>
                             </div>
-                            <div class="text-end">
-                                <small class="text-warning d-block fw-bold" style="font-size: 0.75rem;">${m.stadium}</small>
-                                <small class="text-light opacity-50" style="font-size: 0.7rem;">${timeStr}</small>
+                            <div class="d-flex flex-column gap-2">
+                                 <div class="d-flex align-items-center justify-content-center gap-2">
+                                    <img src="${m.home_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
+                                    <span class="fw-bold text-truncate" style="max-width: 120px;">${m.home_team_vn || m.home_team}</span>
+                                 </div>
+                                <div class="fw-bold fs-3 text-danger my-1">${scoreText}</div>
+                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                    <img src="${m.away_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
+                                    <span class="fw-bold text-truncate" style="max-width: 120px;">${m.away_team_vn || m.away_team}</span>
+                                </div>
+                            </div>
+                            <div class="mt-2">${oddsDisplay}</div>
+                            ${m.locked ? '<div class="mt-2 text-secondary"><small>🔒 Locked</small></div>' : ''}
+                            
+                            <!-- Comment Button -->
+                            <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex justify-content-center">
+                                <button class="btn btn-comment w-100" onclick="event.stopPropagation(); window.openCommentModal(${m.id})">
+                                    💬 Bình luận ${cCount}
+                                </button>
                             </div>
                         </div>
-                        <div class="d-flex flex-column gap-2">
-                             <div class="d-flex align-items-center justify-content-center gap-2">
-                                <img src="${m.home_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
-                                <span class="fw-bold">${m.home_team_vn || m.home_team}</span>
-                             </div>
-                            <div class="fw-bold fs-3 text-danger my-1">${scoreText}</div>
-                            <div class="d-flex align-items-center justify-content-center gap-2">
-                                <img src="${m.away_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
-                                <span class="fw-bold">${m.away_team_vn || m.away_team}</span>
-                            </div>
-                        </div>
-                        <div class="mt-2">${oddsDisplay}</div>
-                        ${m.locked ? '<div class="mt-2 text-secondary"><small>🔒 Locked</small></div>' : ''}
-                    </div>
-                </div>`;
-            }
+                    </div>`;
+                }
 
             if (isShowLive) {
                 let liveMatches = data.filter(m => m.status === 'LIVE');
@@ -562,7 +727,10 @@
         });
     }
 
-    function openPredictionModal(match) {
+    function openPredictionModal(matchId) {
+        const match = window.allMatchesMap[matchId];
+        if (!match) return;
+        
         $('#predictMatchId').val(match.id);
         const name1 = match.home_team_vn || match.home_team;
         const name2 = match.away_team_vn || match.away_team;
@@ -742,7 +910,7 @@
                     <td class="text-center">
                         <span class="text-success">${u.total_correct}</span><span class="mx-1 opacity-50">/</span><span class="text-danger">${u.total_wrong}</span>
                     </td>
-                    <td class="text-end pe-2 text-warning fw-bold">-${u.money_lost.toLocaleString()}</td>
+                    <td class="text-end pe-2 text-warning fw-bold">-${u.money_lost.toLocaleString('vi-VN')} DU1</td>
                 </tr>
             `);
         });
@@ -752,6 +920,171 @@
         $('#oldPassword, #newPassword, #confirmNewPassword').val('');
         if (currentUser) $('#settingsFullName').val(currentUser.full_name || "");
         new bootstrap.Modal(document.getElementById('accountSettingsModal')).show();
+    }
+
+    // --- COMMENT SYSTEM ---
+    let currentMatchIdForComments = null;
+    let commentRefreshInterval = null;
+
+    window.openCommentModal = function(matchId) {
+        const match = window.allMatchesMap[matchId];
+        if (!match) return;
+        currentMatchIdForComments = match.id;
+        $('#commentMatchTitle').text(`${match.home_team_vn || match.home_team} vs ${match.away_team_vn || match.away_team}`);
+        $('#commentContent').val('');
+        loadComments(match.id);
+        
+        const modal = new bootstrap.Modal(document.getElementById('commentModal'));
+        modal.show();
+
+        // Auto refresh every minute
+        if (commentRefreshInterval) clearInterval(commentRefreshInterval);
+        commentRefreshInterval = setInterval(() => {
+            if (currentMatchIdForComments) loadComments(currentMatchIdForComments);
+        }, 60000);
+    }
+
+    // Clear interval when modal hidden
+    document.getElementById('commentModal').addEventListener('hidden.bs.modal', function () {
+        if (commentRefreshInterval) {
+            clearInterval(commentRefreshInterval);
+            commentRefreshInterval = null;
+        }
+        currentMatchIdForComments = null;
+    });
+
+    function loadComments(matchId) {
+        $('#commentList').html('<div class="text-center py-3 opacity-50 small">Đang tải bình luận...</div>');
+        $.get(`/api/matches/${matchId}/comments`, function(data) {
+            window.allCommentsMap = {}; // Reset map cho mỗi lần load
+            data.forEach(c => window.allCommentsMap[c.id] = c.content);
+            renderComments(data);
+        });
+    }
+
+    function renderComments(comments) {
+        const list = $('#commentList');
+        list.empty();
+        if (comments.length === 0) {
+            list.append('<div class="text-center py-5 opacity-50 small">Chưa có bình luận nào. Hãy là người đầu tiên!</div>');
+            return;
+        }
+
+        const reactionIcons = { '👍': '👍', '❤️': '❤️', '😂': '😂', '😮': '😮', '😢': '😢' };
+
+        comments.forEach(c => {
+            const time = new Date(c.created_at).toLocaleString('vi-VN');
+            const displayName = c.user_full_name || c.user_email_prefix;
+            
+            let reactionsHtml = '';
+            c.reactions.forEach(r => {
+                reactionsHtml += `
+                    <button class="reaction-btn ${r.user_reacted ? 'active' : ''}" onclick="toggleReaction(${c.id}, '${r.reaction_type}')">
+                        ${r.reaction_type} ${r.count}
+                    </button>`;
+            });
+
+            // Picker for new reactions
+            let pickerHtml = '<div class="reaction-picker">';
+            ['👍', '❤️', '😂', '😮', '😢'].forEach(icon => {
+                const already = c.reactions.find(r => r.reaction_type === icon && r.user_reacted);
+                if (!already) {
+                    pickerHtml += `<span class="picker-btn" onclick="toggleReaction(${c.id}, '${icon}')">${icon}</span>`;
+                }
+            });
+            pickerHtml += '</div>';
+
+            const isOwner = currentUser && c.user_id === currentUser.id;
+            const isAdmin = currentUser && currentUser.is_admin;
+            
+            let actionsHtml = '';
+            if (isOwner || isAdmin) {
+                actionsHtml = `
+                    <div class="comment-actions mt-1">
+                        ${isOwner ? `<button class="btn btn-link btn-sm text-info p-0 me-2" onclick="editComment(${c.id})" title="Sửa">✏️</button>` : ''}
+                        <button class="btn btn-link btn-sm text-danger p-0" onclick="deleteComment(${c.id})" title="Xóa">🗑️</button>
+                    </div>
+                `;
+            }
+
+            list.append(`
+                <div class="comment-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="comment-user">${displayName}</div>
+                        ${actionsHtml}
+                    </div>
+                    <div class="comment-content">${escapeHTML(c.content)}</div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="comment-time">${time}</div>
+                        ${pickerHtml}
+                    </div>
+                    <div class="reaction-bar mt-1">
+                        ${reactionsHtml}
+                    </div>
+                </div>
+            `);
+        });
+    }
+
+    function postComment() {
+        const content = $('#commentContent').val().trim();
+        if (!content) return;
+        
+        setLoadingState('btnPostComment', true);
+        $.ajax({
+            url: `/api/matches/${currentMatchIdForComments}/comments`,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ content: content }),
+            success: function() {
+                $('#commentContent').val('');
+                loadComments(currentMatchIdForComments);
+            },
+            complete: () => setLoadingState('btnPostComment', false)
+        });
+    }
+
+    function toggleReaction(commentId, type) {
+        $.ajax({
+            url: `/api/comments/${commentId}/react`,
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ reaction_type: type }),
+            success: function() {
+                loadComments(currentMatchIdForComments);
+            }
+        });
+    }
+
+    window.editComment = function(commentId) {
+        const oldContent = window.allCommentsMap[commentId] || "";
+        showPrompt("Sửa bình luận:", oldContent, function(newContent) {
+            if (newContent === null || newContent.trim() === "" || newContent === oldContent) return;
+            
+            $.ajax({
+                url: `/api/comments/${commentId}`,
+                type: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify({ content: newContent.trim() }),
+                success: function() {
+                    loadComments(currentMatchIdForComments);
+                },
+                error: (err) => showMsg(err.responseJSON?.detail || "Không thể sửa bình luận", "Lỗi")
+            });
+        });
+    }
+
+    window.deleteComment = function(commentId) {
+        showConfirm("Bạn có chắc chắn muốn xóa bình luận này?", function() {
+            $.ajax({
+                url: `/api/comments/${commentId}`,
+                type: "DELETE",
+                success: function() {
+                    loadComments(currentMatchIdForComments);
+                },
+                error: (err) => showMsg(err.responseJSON?.detail || "Không thể xóa bình luận", "Lỗi")
+            });
+        });
     }
 
     function submitUpdateProfile() {
@@ -765,6 +1098,7 @@
             contentType: "application/json",
             data: JSON.stringify({ full_name: newName }),
             success: function(res) {
+                bootstrap.Modal.getInstance(document.getElementById('accountSettingsModal')).hide();
                 showMsg(res.message, "Thành công");
                 checkUser(); // Refresh UI
             },
@@ -791,9 +1125,8 @@
             contentType: "application/json",
             data: JSON.stringify({ old_password: oldPass, new_password: newPass }),
             success: function(res) {
-                showMsg(res.message, "Thành công", () => {
-                   bootstrap.Modal.getInstance(document.getElementById('accountSettingsModal')).hide();
-                });
+                bootstrap.Modal.getInstance(document.getElementById('accountSettingsModal')).hide();
+                showMsg(res.message, "Thành công");
             },
             error: function(err) {
                 showMsg(err.responseJSON?.detail || "Đổi mật khẩu thất bại", "Lỗi");

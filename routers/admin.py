@@ -130,7 +130,11 @@ def run_batch_live(current_admin: models.User = Depends(get_current_admin_user))
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
     settings = db.query(models.Setting).all()
-    return {s.key: s.value for s in settings}
+    res = {s.key: s.value for s in settings}
+    # Mask sensitive tokens
+    if "mattermost_bot_token" in res and res["mattermost_bot_token"]:
+        res["mattermost_bot_token"] = "********"
+    return res
 
 @router.patch("/settings")
 def update_settings(data: schemas.SettingUpdate, db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
@@ -146,8 +150,8 @@ def update_settings(data: schemas.SettingUpdate, db: Session = Depends(get_db), 
         s = db.query(models.Setting).filter(models.Setting.key == "default_prediction_time").first()
         if s: s.value = str(data.default_prediction_time)
 
-    # Batch Settings
-    batch_fields = [
+    # Batch & ChatOps Settings
+    fields = [
         ('batch_predict_interval', data.batch_predict_interval),
         ('batch_predict_enabled', data.batch_predict_enabled),
         ('batch_predict_start_time', data.batch_predict_start_time),
@@ -155,10 +159,19 @@ def update_settings(data: schemas.SettingUpdate, db: Session = Depends(get_db), 
         ('batch_live_enabled', data.batch_live_enabled),
         ('batch_live_start_time', data.batch_live_start_time),
         ('active_wc_year', data.active_wc_year),
+        ('mattermost_enabled', data.mattermost_enabled),
+        ('mattermost_url', data.mattermost_url),
+        ('mattermost_channel_id', data.mattermost_channel_id),
+        ('mattermost_root_id', data.mattermost_root_id),
+        ('mattermost_message_template', data.mattermost_message_template),
     ]
 
+    # Special handling for token: only update if not empty and not masked value
+    if data.mattermost_bot_token is not None and data.mattermost_bot_token.strip() != "" and data.mattermost_bot_token != "********":
+        fields.append(('mattermost_bot_token', data.mattermost_bot_token))
+
     needs_sync = False
-    for key, val in batch_fields:
+    for key, val in fields:
         if val is not None:
             s = db.query(models.Setting).filter(models.Setting.key == key).first()
             val_str = str(val).lower() if isinstance(val, bool) else str(val)

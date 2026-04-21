@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import datetime, time
 import pytz
+import sqlalchemy
 from database import get_db, models, schemas
 from dependencies import get_current_active_user, get_current_admin_user
 
@@ -39,9 +40,13 @@ def get_matches(db: Session = Depends(get_db)):
     # 3. Sử dụng Cache cho dữ liệu quốc gia
     c_data = get_country_data(db)
     
+    # 4. Đếm số lượng bình luận cho từng trận đấu
+    comment_counts = {m_id: count for m_id, count in db.query(models.Comment.match_id, sqlalchemy.func.count(models.Comment.id)).group_by(models.Comment.match_id).all()}
+    
     res = []
     for m in matches:
         m_dict = schemas.MatchResponse.model_validate(m)
+        m_dict.comment_count = comment_counts.get(m.id, 0)
         
         # Điền thông tin home team
         h_code = (m.home_team_code or "").lower()
@@ -234,3 +239,109 @@ def admin_generate_ai_analysis(match_id: int, current_admin: models.User = Depen
         start_time=match.start_time.isoformat() if match.start_time else ""
     )
     return ai_data
+
+# --- COMMENTS & REACTIONS ---
+
+@router.get("/matches/{match_id}/comments", response_model=List[schemas.CommentResponse])
+def get_match_comments(match_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    comments = db.query(models.Comment).filter(models.Comment.match_id == match_id).order_by(models.Comment.created_at.desc()).all()
+    
+    res = []
+    for c in comments:
+        # Group reactions
+        reaction_counts = {}
+        user_reactions = set()
+        for r in c.reactions:
+            reaction_counts[r.reaction_type] = reaction_counts.get(r.reaction_type, 0) + 1
+            if r.user_id == current_user.id:
+                user_reactions.add(r.reaction_type)
+        
+        stats = []
+        for r_type, count in reaction_counts.items():
+            stats.append(schemas.CommentReactionStats(
+                reaction_type=r_type,
+                count=count,
+                user_reacted=r_type in user_reactions
+            ))
+            
+        res.append(schemas.CommentResponse(
+            id=c.id,
+            match_id=c.match_id,
+            user_id=c.user_id,
+            user_full_name=c.user.full_name,
+            user_email_prefix=c.user.email.split('@')[0],
+            content=c.content,
+            created_at=c.created_at,
+            reactions=stats
+        ))
+    return res
+
+@router.post("/matches/{match_id}/comments", response_model=schemas.CommentResponse)
+def post_comment(match_id: int, comment_data: schemas.CommentCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    new_comment = models.Comment(
+        match_id=match_id,
+        user_id=current_user.id,
+        content=comment_data.content
+    )
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+    
+    return schemas.CommentResponse(
+        id=new_comment.id,
+        match_id=new_comment.match_id,
+        user_id=new_comment.user_id,
+        user_full_name=current_user.full_name,
+        user_email_prefix=current_user.email.split('@')[0],
+        content=new_comment.content,
+        created_at=new_comment.created_at,
+        reactions=[]
+    )
+
+@router.post("/comments/{comment_id}/react")
+def toggle_reaction(comment_id: int, reaction_data: schemas.ReactionToggle, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    existing = db.query(models.CommentReaction).filter(
+        models.CommentReaction.comment_id == comment_id,
+        models.CommentReaction.user_id == current_user.id,
+        models.CommentReaction.reaction_type == reaction_data.reaction_type
+    ).first()
+    
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {"message": "Reaction removed"}
+    else:
+        new_reaction = models.CommentReaction(
+            comment_id=comment_id,
+            user_id=current_user.id,
+            reaction_type=reaction_data.reaction_type
+        )
+        db.add(new_reaction)
+        db.commit()
+        return {"message": "Reaction added"}
+
+@router.put("/comments/{comment_id}")
+def update_comment(comment_id: int, data: schemas.CommentUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bình luận.")
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bạn không thể sửa bình luận của người khác.")
+    
+    comment.content = data.content
+    db.commit()
+    return {"message": "Đã cập nhật bình luận."}
+
+@router.delete("/comments/{comment_id}")
+def delete_comment(comment_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    comment = db.query(models.Comment).filter(models.Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bình luận.")
+    
+    # Chỉ chủ sở hữu hoặc admin mới được xóa
+    if comment.user_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xóa bình luận này.")
+    
+    db.delete(comment)
+    db.commit()
+    return {"message": "Đã xóa bình luận."}

@@ -178,6 +178,9 @@
         <li class="nav-item">
             <button class="nav-link text-white" id="settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings">Cấu hình chung</button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link text-white" id="chatops-tab" data-bs-toggle="tab" data-bs-target="#tab-chatops">Thông báo ChatOps</button>
+        </li>
     </ul>
 
     <div class="tab-content" id="adminTabContent">
@@ -288,12 +291,12 @@
                     <form id="settingsForm">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label text-warning fw-bold">Tiền phạt mỗi trận thua (VNĐ)</label>
-                                <input type="number" class="form-control bg-dark text-white border-secondary" id="setPenalty">
+                                <label class="form-label text-warning fw-bold">Tiền mỗi trận thua (DU1)</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary currency-input" id="setPenalty">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label text-warning fw-bold">Tiền cược Ngôi sao may mắn (VNĐ)</label>
-                                <input type="number" class="form-control bg-dark text-white border-secondary" id="setLuckyAmount">
+                                <label class="form-label text-warning fw-bold">Tiền Ngôi sao may mắn (DU1)</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary currency-input" id="setLuckyAmount">
                             </div>
                             
                             <div class="col-12 mt-4 border-top border-secondary pt-4">
@@ -350,10 +353,61 @@
                 </div>
             </div>
         </div>
+
+        <!-- ChatOps Tab -->
+        <div class="tab-pane fade" id="tab-chatops" role="tabpanel">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <form id="chatopsForm">
+                        <div class="row g-4">
+                            <div class="col-12 d-flex align-items-center">
+                                <div class="form-check form-switch me-4">
+                                    <input class="form-check-input" type="checkbox" id="setChatOpsEnabled" style="height: 1.5rem; width: 3rem;">
+                                    <label class="form-check-label ms-2 text-warning fw-bold" for="setChatOpsEnabled">Kích hoạt thông báo ChatOps</label>
+                                </div>
+                                <small class="text-secondary">Tắt/bật tự động gửi nhắc nhở trận đấu vào Group Chat.</small>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label class="form-label text-white small text-uppercase fw-bold">Webhook API URL</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary" id="setChatOpsUrl" placeholder="https://chat.runsystem.vn/api/v4/posts">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-white small text-uppercase fw-bold">Channel ID</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary" id="setChatOpsChannelId">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label text-white small text-uppercase fw-bold">Root ID (Thread ID - Tùy chọn)</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary" id="setChatOpsRootId">
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label text-white small text-uppercase fw-bold">Bot Token (Bearer Token)</label>
+                                <input type="password" class="form-control bg-dark text-white border-secondary" id="setChatOpsToken" placeholder="Nhập token mới hoặc để trống nếu không đổi">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label text-white small text-uppercase fw-bold">Nội dung mẫu (Message Template)</label>
+                                <textarea class="form-control bg-dark text-white border-secondary font-monospace" id="setChatOpsTemplate" rows="5"></textarea>
+                                <div class="mt-2">
+                                    <small class="text-info">Placeholder: <code>{{stage}}</code>, <code>{{home_team}}</code>, <code>{{away_team}}</code>, <code>{{start_time}}</code>, <code>{{stadium}}</code></small>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-4 pt-4 border-top border-secondary">
+                                <button type="button" class="btn btn-warning px-5 fw-bold" id="btnSaveChatOps" onclick="saveSettings()">Lưu Cấu Hình ChatOps</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Import Modal -->
+        <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-white border-secondary">
@@ -473,16 +527,37 @@
     </div>
 </div>
 
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     const token = localStorage.getItem('token');
     if (!token) window.location.href = '/';
 
     let countries = [];
     let stadiums = [];
+    let stadiumModal;
 
+    // --- HELPER FUNCTIONS ---
+    function formatVND(val) {
+        if (val === undefined || val === null || val === '') return '';
+        return val.toString().replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    function parseVND(str) {
+        if (!str) return 0;
+        return parseInt(str.toString().replace(/\./g, '')) || 0;
+    }
+
+    function setLoadingState(btnId, isLoading) {
+        const btn = $(`#${btnId}`);
+        if (isLoading) btn.addClass('btn-loading').prop('disabled', true);
+        else btn.removeClass('btn-loading').prop('disabled', false);
+    }
+
+    // --- UI FEEDBACK ---
     function showMsg(message, title = "Hệ thống", callback = null) {
         $("#dialog-text").html(message);
         $("#dialog-msg").dialog({
@@ -496,16 +571,6 @@
                 }
             }
         });
-    }
-
-    function toggleLoading(show, text = "Hệ thống đang xử lý...") {
-        const overlay = $('#loadingOverlay');
-        if (show) {
-            overlay.find('.loading-text').text(text);
-            overlay.show().css('opacity', '1');
-        } else {
-            overlay.fadeOut(300);
-        }
     }
 
     function showConfirm(message, title = "Xác nhận", callback = null) {
@@ -526,6 +591,17 @@
         });
     }
 
+    function toggleLoading(show, text = "Hệ thống đang xử lý...") {
+        const overlay = $('#loadingOverlay');
+        if (show) {
+            overlay.find('.loading-text').text(text);
+            overlay.show().css('opacity', '1');
+        } else {
+            overlay.fadeOut(300);
+        }
+    }
+
+    // --- API CORE ---
     function setupAjax() {
         $.ajaxSetup({
             beforeSend: function(xhr) {
@@ -534,29 +610,68 @@
         });
     }
 
+    function checkAdmin() {
+        $.get('/api/auth/me', function(user) {
+            let prefix = user.email.split('@')[0];
+            let display = (user.full_name || prefix) + " (Admin)";
+            $('#userInfo').text(display);
+            if (!user.is_admin) {
+                showMsg("Bạn không có quyền truy cập trang này!", "Cảnh báo", () => {
+                   window.location.href = '/static/dashboard.html';
+                });
+            }
+        }).fail(() => logout());
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+    }
+
+    // --- INITIALIZATION ---
     $(document).ready(function() {
         setupAjax();
         checkAdmin();
         
-        // Tab switching events
+        stadiumModal = new bootstrap.Modal(document.getElementById('stadiumModal'));
+
+        // One-time event delegation for currency inputs with guard
+        $(document).on('input', '.currency-input', function() {
+            const $el = $(this);
+            const cur = $el.val();
+            const formatted = formatVND(cur);
+            if (cur !== formatted) {
+                $el.val(formatted);
+            }
+        });
+
+        // Initialize Dialog once
+        $("#dialog-msg").dialog({
+            autoOpen: false,
+            modal: true,
+            width: 350,
+            classes: { "ui-dialog": "custom-dialog" }
+        });
+
+        // Tab switching logic
         $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
             let target = $(e.target).attr("data-bs-target");
             if (target === '#tab-matches') loadMatches();
-            if (target === '#tab-users') loadUsers();
-            if (target === '#tab-countries') loadCountriesAdmin();
-            if (target === '#tab-stadiums') loadStadiumsAdmin();
-            if (target === '#tab-settings') loadSettings();
+            else if (target === '#tab-users') loadUsers();
+            else if (target === '#tab-countries') loadCountriesAdmin();
+            else if (target === '#tab-stadiums') loadStadiumsAdmin();
+            else if (target === '#tab-settings' || target === '#tab-chatops') loadSettings();
         });
 
-        loadMatches(); // default
+        loadMatches(); 
         loadCommonData();
         getCurrentYear();
     });
 
+    // --- CONTENT LOADERS ---
     function loadCommonData() {
         toggleLoading(true, "Đang nạp dữ liệu chung...");
         $.get('/api/countries', function(data) {
-            // data now has {code, name, name_vn}
             countries = data.map(c => ({ 
                 label: `[${c.code.toUpperCase()}] ${c.name}${c.name_vn ? ' ('+c.name_vn+')' : ''}`, 
                 value: c.name_vn || c.name, 
@@ -565,6 +680,38 @@
                 name_vn: c.name_vn
             }));
             setupAutocompletes();
+        }).always(() => toggleLoading(false));
+    }
+
+    function loadMatches() {
+        toggleLoading(true, "Đang nạp danh sách trận đấu...");
+        $.get('/api/matches', function(data) {
+            let list = $('#matchList');
+            list.empty();
+            stadiums = [...new Set(data.filter(m => m.stadium).map(m => m.stadium))];
+            setupAutocompletes();
+
+            data.sort((a,b) => a.match_no - b.match_no).forEach(m => {
+                let badge = '';
+                if(m.status === 'READY') badge = '<span class="badge badge-ready">READY</span>';
+                else if(m.status === 'LIVE') badge = '<span class="badge badge-live">LIVE</span>';
+                else if(m.status === 'FINISHED') badge = '<span class="badge badge-finished">FINISHED</span>';
+                else badge = '<span class="badge badge-scheduled">SCHEDULED</span>';
+
+                list.append(`
+                    <tr>
+                        <td class="ps-3">${m.match_no}</td>
+                        <td class="small text-muted">${m.stage || ''}</td>
+                        <td><strong>${m.home_team}</strong> vs <strong>${m.away_team}</strong></td>
+                        <td>${badge}</td>
+                        <td class="small">${new Date(m.start_time).toLocaleString('vi-VN')}</td>
+                        <td class="text-center">${m.lucky_star_enabled ? '🌟' : ''}</td>
+                        <td class="pe-3">
+                            <button class="btn btn-sm btn-outline-info" onclick='openEditModal(${JSON.stringify(m)})'>Sửa</button>
+                        </td>
+                    </tr>
+                `);
+            });
         }).always(() => toggleLoading(false));
     }
 
@@ -581,78 +728,19 @@
 
         $("#editHome").autocomplete({
             source: countrySource,
-            select: (e, ui) => {
-                $('#editHomeCode').val(ui.item.code);
-            }
+            select: (e, ui) => $('#editHomeCode').val(ui.item.code)
         });
         $("#editAway").autocomplete({
             source: countrySource,
-            select: (e, ui) => {
-                $('#editAwayCode').val(ui.item.code);
-            }
+            select: (e, ui) => $('#editAwayCode').val(ui.item.code)
         });
 
-        // For other fields that only need the name
         let teamNames = countries.map(c => c.value);
         $("#editFav, #editUnderdog").autocomplete({ source: teamNames });
         $("#editStadium").autocomplete({ source: stadiums });
     }
 
-    function logout() {
-        localStorage.removeItem('token');
-        window.location.href = '/';
-    }
-
-    function checkAdmin() {
-        $.get('/api/auth/me', function(user) {
-            let prefix = user.email.split('@')[0];
-            let display = (user.full_name || prefix) + " (Admin)";
-            $('#userInfo').text(display);
-            if (!user.is_admin) {
-                showMsg("Bạn không có quyền truy cập trang này!", "Cảnh báo", () => {
-                   window.location.href = '/static/dashboard.html';
-                });
-            }
-        }).fail(() => logout());
-    }
-
-    function loadMatches() {
-        toggleLoading(true, "Đang nạp danh sách trận đấu...");
-        $.get('/api/matches', function(data) {
-            let list = $('#matchList');
-            list.empty();
-            
-            // Collect unique stadiums for autocomplete
-            stadiums = [...new Set(data.map(m => m.stadium))];
-            setupAutocompletes();
-
-            data.sort((a,b) => a.match_no - b.match_no).forEach(m => {
-                let badge = '';
-                if(m.status === 'READY') badge = '<span class="badge badge-ready">READY</span>';
-                else if(m.status === 'LIVE') badge = '<span class="badge badge-live">LIVE</span>';
-                else if(m.status === 'FINISHED') badge = '<span class="badge badge-finished">FINISHED</span>';
-                else badge = '<span class="badge badge-scheduled">SCHEDULED</span>';
-
-                let star = m.lucky_star_enabled ? '🌟' : '';
-                let time = new Date(m.start_time).toLocaleString();
-
-                list.append(`
-                    <tr>
-                        <td class="ps-3">${m.match_no}</td>
-                        <td class="small text-muted">${m.stage}</td>
-                        <td><strong>${m.home_team}</strong> vs <strong>${m.away_team}</strong></td>
-                        <td>${badge}</td>
-                        <td class="small">${time}</td>
-                        <td class="text-center">${star}</td>
-                        <td class="pe-3">
-                            <button class="btn btn-sm btn-outline-info" onclick='openEditModal(${JSON.stringify(m)})'>Sửa</button>
-                        </td>
-                    </tr>
-                `);
-            });
-        }).always(() => toggleLoading(false));
-    }
-
+    // --- MATCH ACTIONS ---
     function openEditModal(m) {
         $('#editMid').val(m.id);
         $('#editHome').val(m.home_team);
@@ -678,38 +766,7 @@
         } else {
             $('#editFav, #editUnderdog, #editHandicap, #editAnalysis').val('');
         }
-
         new bootstrap.Modal(document.getElementById('editMatchModal')).show();
-    }
-
-    function generateAI() {
-        let mid = $('#editMid').val();
-        let btn = $('.btn-warning');
-        btn.prop('disabled', true).text('Đang phân tích...');
-        
-        $.ajax({
-            url: `/api/admin/matches/${mid}/generate-ai`,
-            type: 'POST',
-            success: function(data) {
-                $('#editFav').val(data.favorite_team);
-                $('#editUnderdog').val(data.underdog_team);
-                $('#editHandicap').val(data.handicap);
-                $('#editAnalysis').val(data.analysis_text);
-                
-                // New: AI predictive filling
-                if (data.predicted_team1) $('#editHome').val(data.predicted_team1);
-                if (data.predicted_team2) $('#editAway').val(data.predicted_team2);
-                if (data.predicted_stadium) $('#editStadium').val(data.predicted_stadium);
-
-                showMsg('AI đã phân tích xong. Vui lòng kiểm tra và nhấn Save để lưu.', 'AI Thành công');
-            },
-            error: function(err) {
-                showMsg(err.responseJSON?.detail || "AI Phân tích thất bại", 'Lỗi AI');
-            },
-            complete: function() {
-                btn.prop('disabled', false).text('✨ AI Phân tích');
-            }
-        });
     }
 
     function saveMatch() {
@@ -738,37 +795,58 @@
             contentType: 'application/json',
             data: JSON.stringify(payload),
             success: function() {
+                // Hide modal FIRST to avoid focus conflicts with the upcoming dialog
+                const modalEl = document.getElementById('editMatchModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
                 showMsg('Cập nhật trận đấu thành công!', 'Thành công', () => {
-                   bootstrap.Modal.getInstance(document.getElementById('editMatchModal')).hide();
                    loadMatches();
                 });
             },
-            error: function(err) {
-                showMsg(err.responseJSON?.detail || "Update failed", 'Lỗi');
-            },
+            error: (err) => showMsg(err.responseJSON?.detail || "Lỗi cập nhật", 'Lỗi'),
             complete: () => setLoadingState('btnSaveMatch', false)
         });
     }
 
-    // --- USERS MANAGEMENT ---
+    function generateAI() {
+        let mid = $('#editMid').val();
+        let btn = $('.btn-warning');
+        let origText = btn.text();
+        btn.prop('disabled', true).text('Đang phân tích...');
+        
+        $.ajax({
+            url: `/api/admin/matches/${mid}/generate-ai`,
+            type: 'POST',
+            success: function(data) {
+                $('#editFav').val(data.favorite_team);
+                $('#editUnderdog').val(data.underdog_team);
+                $('#editHandicap').val(data.handicap);
+                $('#editAnalysis').val(data.analysis_text);
+                if (data.predicted_team1) $('#editHome').val(data.predicted_team1);
+                if (data.predicted_team2) $('#editAway').val(data.predicted_team2);
+                if (data.predicted_stadium) $('#editStadium').val(data.predicted_stadium);
+                showMsg('AI phân tích xong!', 'Thành công');
+            },
+            error: (err) => showMsg(err.responseJSON?.detail || "AI lỗi", 'Lỗi'),
+            complete: () => btn.prop('disabled', false).text(origText)
+        });
+    }
+
+    // --- OTHER MANAGEMENT ---
     function loadUsers() {
-        toggleLoading(true, "Đang nạp danh sách người dùng...");
+        toggleLoading(true);
         $.get('/api/admin/users', function(data) {
-            let list = $('#userList');
-            list.empty();
+            let list = $('#userList').empty();
             data.forEach(u => {
                 list.append(`
                     <tr>
                         <td>${u.email}</td>
                         <td>${u.full_name || '-'}</td>
-                        <td class="text-center">
-                            <input type="checkbox" ${u.is_active ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_active', this.checked)">
-                        </td>
-                        <td class="text-center">
-                            <input type="checkbox" ${u.is_admin ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_admin', this.checked)">
-                        </td>
+                        <td class="text-center"><input type="checkbox" ${u.is_active ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_active', this.checked)"></td>
+                        <td class="text-center"><input type="checkbox" ${u.is_admin ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_admin', this.checked)"></td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-warning me-1" onclick="resetPassword(${u.id}, '${u.email}')">Reset Pass</button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="resetPassword(${u.id}, '${u.email}')">Reset</button>
                             <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id}, '${u.email}')">Xóa</button>
                         </td>
                     </tr>
@@ -778,61 +856,32 @@
     }
 
     function updateUser(id, field, val) {
-        let payload = {}; payload[field] = val;
-        $.ajax({
-            url: `/api/admin/users/${id}`,
-            type: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-            success: () => showMsg("Cập nhật người dùng thành công")
+        let p = {}; p[field] = val;
+        $.ajax({ url: `/api/admin/users/${id}`, type: 'PUT', contentType: 'application/json', data: JSON.stringify(p), success: () => showMsg("Xong") });
+    }
+
+    function resetPassword(id, email) {
+        showConfirm(`Reset mật khẩu ${email}?`, "Xác nhận", () => {
+            $.post(`/api/admin/users/${id}/reset-password`, (res) => showMsg(res.message));
         });
     }
 
     function deleteUser(id, email) {
-        showConfirm(`Bạn có chắc muốn xóa vĩnh viễn người dùng <b>${email}</b>? Toàn bộ lịch sử dự đoán và thống kê của người dùng này cũng sẽ bị xóa sạch.`, "Xác nhận xóa người dùng", () => {
-            $.ajax({
-                url: `/api/admin/users/${id}`,
-                type: 'DELETE',
-                success: function(res) {
-                    showMsg(res.message, "Thành công", () => loadUsers());
-                },
-                error: function(err) {
-                    showMsg(err.responseJSON?.detail || "Xóa người dùng thất bại", "Lỗi");
-                }
-            });
+        showConfirm(`Xóa vĩnh viễn ${email}?`, "Xác nhận", () => {
+            $.ajax({ url: `/api/admin/users/${id}`, type: 'DELETE', success: (res) => showMsg(res.message, "Xong", loadUsers) });
         });
     }
 
-    function resetPassword(id, email) {
-        showConfirm(`Bạn có chắc muốn reset mật khẩu của người dùng <b>${email}</b>? Mật khẩu mới sẽ sinh ngẫu nhiên và gửi tới email này.`, "Xác nhận Reset Mật khẩu", () => {
-            $.ajax({
-                url: `/api/admin/users/${id}/reset-password`,
-                type: 'POST',
-                success: function(res) {
-                    showMsg(res.message, "Thành công");
-                },
-                error: function(err) {
-                    showMsg(err.responseJSON?.detail || "Reset mật khẩu thất bại", "Lỗi");
-                }
-            });
-        });
-    }
-
-    // --- COUNTRIES MANAGEMENT ---
     function loadCountriesAdmin() {
-        toggleLoading(true, "Đang nạp danh sách quốc gia...");
+        toggleLoading(true);
         $.get('/api/admin/countries', function(data) {
-            let list = $('#countryList');
-            list.empty();
+            let list = $('#countryList').empty();
             data.sort((a,b) => a.name.localeCompare(b.name)).forEach(c => {
                 list.append(`
                     <tr>
                         <td><code>${c.code}</code></td>
                         <td>${c.name}</td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary w-75" 
-                                   value="${c.name_vn || ''}" onchange="updateCountry('${c.code}', this.value)">
-                        </td>
+                        <td><input type="text" class="form-control form-control-sm bg-dark text-white" value="${c.name_vn || ''}" onchange="updateCountry('${c.code}', this.value)"></td>
                         <td><img src="${c.flag_data}" style="width:24px"></td>
                     </tr>
                 `);
@@ -841,30 +890,21 @@
     }
 
     function updateCountry(code, val) {
-        $.ajax({
-            url: `/api/admin/countries/${code}`,
-            type: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify({ name_vn: val }),
-            success: () => showMsg("Đã cập nhật tên tiếng Việt")
-        });
+        $.ajax({ url: `/api/admin/countries/${code}`, type: 'PUT', contentType: 'application/json', data: JSON.stringify({ name_vn: val }), success: () => showMsg("Đã lưu") });
     }
 
-    // --- STADIUMS MANAGEMENT ---
     function loadStadiumsAdmin() {
-        toggleLoading(true, "Đang nạp danh sách sân vận động...");
+        toggleLoading(true);
         $.get('/api/admin/stadiums', function(data) {
-            let list = $('#stadiumList');
-            list.empty();
+            let list = $('#stadiumList').empty();
             data.forEach(s => {
                 list.append(`
                     <tr>
                         <td>${s.id}</td>
-                        <td class="text-info fw-bold">${s.name}</td>
-                        <td>${s.city || '<i class="text-muted small">Chưa cập nhật</i>'}</td>
-                        <td>${s.country || '<i class="text-muted small">Chưa cập nhật</i>'}</td>
+                        <td class="text-info font-weight-bold">${s.name}</td>
+                        <td>${s.city || '-'}</td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-info me-1" onclick="openStadiumModal(${s.id}, '${s.name.replace(/'/g, "\\'")}', '${(s.city || '').replace(/'/g, "\\'")}', '${(s.country || '').replace(/'/g, "\\'")}')">Sửa</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="openStadiumModal(${s.id},'${s.name}','${s.city||''}','${s.country||''}')">Sửa</button>
                             <button class="btn btn-sm btn-outline-danger" onclick="deleteStadium(${s.id})">Xóa</button>
                         </td>
                     </tr>
@@ -875,216 +915,112 @@
         }).always(() => toggleLoading(false));
     }
 
-    let stadiumModal;
-    $(document).ready(function() {
-        stadiumModal = new bootstrap.Modal(document.getElementById('stadiumModal'));
-    });
-
-    function openStadiumModal(id = null, name = '', city = '', country = '') {
-        $('#editStadiumId').val(id || '');
-        $('#stadiumName').val(name);
-        $('#stadiumCity').val(city);
-        $('#stadiumCountry').val(country);
-        $('#stadiumModalTitle').text(id ? 'Cập nhật Sân vận động' : 'Thêm Sân vận động mới');
+    function openStadiumModal(id=null, n='', ci='', co='') {
+        $('#editStadiumId').val(id||'');
+        $('#stadiumName').val(n); $('#stadiumCity').val(ci); $('#stadiumCountry').val(co);
         stadiumModal.show();
     }
 
     function saveStadium() {
-        let id = $('#editStadiumId').val();
-        let name = $('#stadiumName').val().trim();
-        let city = $('#stadiumCity').val().trim();
-        let country = $('#stadiumCountry').val().trim();
-        
-        if (!name) return showMsg("Vui lòng nhập tên sân!");
-        
-        let url = '/api/admin/stadiums';
-        let type = 'POST';
-        
-        if (id) {
-            url += '/' + id;
-            type = 'PUT';
-        }
-        
-        setLoadingState('btnSaveStadium', true);
+        let n=$('#stadiumName').val().trim(); if(!n) return;
+        let id=$('#editStadiumId').val();
+        let url='/api/admin/stadiums'+(id?'/'+id:'');
         $.ajax({
-            url: url,
-            type: type,
-            contentType: 'application/json',
-            data: JSON.stringify({ name: name, city: city, country: country }),
-            success: function() {
-                stadiumModal.hide();
-                loadStadiumsAdmin();
-                showMsg(id ? "Cập nhật thành công!" : "Thêm sân thành công!");
-            },
-            complete: () => setLoadingState('btnSaveStadium', false)
+            url:url, type:id?'PUT':'POST', contentType:'application/json',
+            data:JSON.stringify({name:n, city:$('#stadiumCity').val(), country:$('#stadiumCountry').val()}),
+            success:()=>{ stadiumModal.hide(); loadStadiumsAdmin(); showMsg("Xong"); }
         });
     }
 
     function deleteStadium(id) {
-        showConfirm("Xóa sân vận động này?", "Xác nhận xóa", () => {
-            $.ajax({ url: `/api/admin/stadiums/${id}`, type: 'DELETE', success: () => loadStadiumsAdmin() });
-        });
+        showConfirm("Xóa sân?", "Xác nhận", () => $.ajax({url:`/api/admin/stadiums/${id}`, type:'DELETE', success:loadStadiumsAdmin }));
     }
 
-    // --- SETTINGS MANAGEMENT ---
+    // --- SETTINGS ---
     function loadSettings() {
-        toggleLoading(true, "Đang nạp cấu hình...");
-        $.get('/api/admin/settings', function(data) {
-            $('#setPenalty').val(data.penalty_per_loss);
-            $('#setLuckyAmount').val(data.lucky_star_amount);
-            
-            
-            // Batch Predict
-            $('#setPredictInterval').val(data.batch_predict_interval || 1);
-            $('#setPredictEnabled').prop('checked', data.batch_predict_enabled === 'true');
-            $('#setPredictStartTime').val(data.batch_predict_start_time || data.default_prediction_time || "19:00");
-            
-            // Batch Live
-            $('#setLiveInterval').val(data.batch_live_interval || 5);
-            $('#setLiveEnabled').prop('checked', data.batch_live_enabled === 'true');
-            $('#setLiveStartTime').val(data.batch_live_start_time || "19:00");
+        toggleLoading(true);
+        $.get('/api/admin/settings', function(d) {
+            $('#setPenalty').val(formatVND(d.penalty_per_loss || 0));
+            $('#setLuckyAmount').val(formatVND(d.lucky_star_amount || 0));
+            $('#setPredictInterval').val(d.batch_predict_interval || 1);
+            $('#setPredictEnabled').prop('checked', d.batch_predict_enabled === 'true');
+            $('#setPredictStartTime').val(d.batch_predict_start_time || "19:00");
+            $('#setLiveInterval').val(d.batch_live_interval || 5);
+            $('#setLiveEnabled').prop('checked', d.batch_live_enabled === 'true');
+            $('#setLiveStartTime').val(d.batch_live_start_time || "19:00");
+            $('#setChatOpsEnabled').prop('checked', d.mattermost_enabled === 'true');
+            $('#setChatOpsUrl').val(d.mattermost_url || "");
+            $('#setChatOpsChannelId').val(d.mattermost_channel_id || "");
+            $('#setChatOpsRootId').val(d.mattermost_root_id || "");
+            $('#setChatOpsToken').val(d.mattermost_bot_token || "");
+            $('#setChatOpsTemplate').val(d.mattermost_message_template || "");
         }).always(() => toggleLoading(false));
     }
 
     function saveSettings() {
-        let payload = {
-            penalty_per_loss: parseInt($('#setPenalty').val()),
-            lucky_star_amount: parseInt($('#setLuckyAmount').val()),
-            
-            
+        let p = {
+            penalty_per_loss: parseVND($('#setPenalty').val()),
+            lucky_star_amount: parseVND($('#setLuckyAmount').val()),
             batch_predict_interval: parseInt($('#setPredictInterval').val()),
             batch_predict_enabled: $('#setPredictEnabled').is(':checked'),
             batch_predict_start_time: $('#setPredictStartTime').val(),
-            default_prediction_time: $('#setPredictStartTime').val(), // Sync for backward compatibility
-            
             batch_live_interval: parseInt($('#setLiveInterval').val()),
             batch_live_enabled: $('#setLiveEnabled').is(':checked'),
-            batch_live_start_time: $('#setLiveStartTime').val()
+            batch_live_start_time: $('#setLiveStartTime').val(),
+            mattermost_enabled: $('#setChatOpsEnabled').is(':checked'),
+            mattermost_url: $('#setChatOpsUrl').val(),
+            mattermost_channel_id: $('#setChatOpsChannelId').val(),
+            mattermost_root_id: $('#setChatOpsRootId').val(),
+            mattermost_bot_token: $('#setChatOpsToken').val(),
+            mattermost_message_template: $('#setChatOpsTemplate').val()
         };
         setLoadingState('btnSaveSettings', true);
+        setLoadingState('btnSaveChatOps', true);
         $.ajax({
-            url: '/api/admin/settings',
-            type: 'PATCH',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-            success: () => showMsg("Cập nhật cấu hình thành công"),
-            complete: () => setLoadingState('btnSaveSettings', false)
-        });
-    }
-
-    function runBatch(type, btnEl) {
-        let btn = $(btnEl);
-        let originalText = btn.text();
-        setLoadingState(btn.attr('id'), true);
-        
-        $.ajax({
-            url: `/api/admin/batch/${type}/run`,
-            type: 'POST',
-            success: function() {
-                showMsg(`Batch ${type} đã được thực thi thành công!`, 'Thành công', () => {
-                    loadMatches(); 
-                });
-            },
-            error: function(err) {
-                showMsg(err.responseJSON?.detail || "Lỗi khi chạy batch", 'Lỗi');
-            },
-            complete: function() {
-                setLoadingState(btn.attr('id'), false);
+            url: '/api/admin/settings', type: 'PATCH', contentType: 'application/json', data: JSON.stringify(p),
+            success: () => showMsg("Đặc biệt: Đã lưu thành công cấu hình hệ thống và ChatOps."),
+            complete: () => {
+                setLoadingState('btnSaveSettings', false);
+                setLoadingState('btnSaveChatOps', false);
             }
         });
     }
 
-    async function getCurrentYear() {
-        try {
-            const res = await fetch('/api/admin/active-year');
-            const data = await res.json();
-            const year = data.year;
-            $('#matchYearLabel').text(`World Cup ${year}`);
-            $('title').text(`Admin - Quản lý World Cup ${year}`);
-        } catch (e) {}
+    function runBatch(type, el) {
+        let b=$(el); setLoadingState(b.attr('id'), true);
+        $.ajax({ url: `/api/admin/batch/${type}/run`, type: 'POST', success: () => showMsg("Chạy xong", "Thành công", loadMatches), complete: () => setLoadingState(b.attr('id'), false) });
     }
 
-    function openImportModal() {
-        const modal = new bootstrap.Modal(document.getElementById('importModal'));
-        modal.show();
+    function getCurrentYear() {
+        $.get('/api/admin/active-year', (d) => {
+            $('#matchYearLabel').text(`World Cup ${d.year}`);
+            $('title').text(`Admin - WC ${d.year}`);
+        });
     }
+
+    function openImportModal() { (new bootstrap.Modal(document.getElementById('importModal'))).show(); }
 
     async function uploadMatchFile() {
-        const year = $('#importYear').val();
-        const fileInput = document.getElementById('importFile');
-        const file = fileInput.files[0];
-
-        if (!year || !file) {
-            return showMsg("Vui lòng nhập năm và chọn file", "Thông báo");
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('year', year);
-
-        const btn = $('#btnDoImport');
-        const loading = $('#importLoading');
-        
-        btn.prop('disabled', true);
-        loading.removeClass('d-none');
-
+        let y=$('#importYear').val(); let f=document.getElementById('importFile').files[0];
+        if(!y || !f) return showMsg("Thiếu tin");
+        let fd = new FormData(); fd.append('file', f); fd.append('year', y);
+        $('#btnDoImport').prop('disabled',true); $('#importLoading').removeClass('d-none');
         try {
-            const response = await fetch('/api/admin/years/create-from-file', {
-                method: 'POST',
-                headers: { 
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: formData
-            });
-            const res = await response.json();
-            if (response.ok) {
-                showMsg(res.message, "Thành công", () => {
-                    location.reload();
-                });
-            } else {
-                showMsg("Lỗi: " + (res.detail || "Không rõ"), "Lỗi");
-            }
-        } catch (err) {
-            showMsg("Lỗi kết nối hoặc file quá lớn", "Lỗi");
-        } finally {
-            btn.prop('disabled', false);
-            loading.addClass('d-none');
-        }
+            const r = await fetch('/api/admin/years/create-from-file', { method:'POST', headers:{'Authorization':`Bearer ${token}`}, body:fd });
+            const res = await r.json();
+            if(r.ok) showMsg("Xong", "Thành công", () => location.reload());
+            else showMsg(res.detail, "Lỗi");
+        } finally { $('#btnDoImport').prop('disabled',false); $('#importLoading').addClass('d-none'); }
     }
 
-    async function deleteYear() {
-        const res = await fetch('/api/admin/active-year');
-        const data = await res.json();
-        const year = data.year;
-
-        if (!year) return showMsg("Không xác định được năm hiện tại", "Thông báo");
-
-        showConfirm(`Bạn có chắc muốn XÓA TOÀN BỘ dữ liệu của kỳ World Cup ${year}? Hành động này không thể hoàn tác và chỉ thực hiện được nếu chưa có trận nào diễn ra.`, "Cảnh báo nguy hiểm", async () => {
-            const btn = $('#btnDeleteYear');
-            const originalText = btn.text();
-            btn.prop('disabled', true).text('⌛...');
-
-            try {
-                const response = await fetch(`/api/admin/years/${year}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-                const res = await response.json();
-                if (response.ok) {
-                    showMsg(res.message, "Thành công", () => {
-                        location.reload();
-                    });
-                } else {
-                    showMsg("Lỗi: " + (res.detail || "Không rõ"), "Lỗi");
-                }
-            } catch (err) {
-                showMsg("Lỗi kết nối", "Lỗi");
-            } finally {
-                btn.prop('disabled', false).text(originalText);
-            }
+    function deleteYear() {
+        $.get('/api/admin/active-year', (d) => {
+            showConfirm(`Xóa kỳ WC ${d.year}?`, "Cảnh báo", async () => {
+                const r = await fetch(`/api/admin/years/${d.year}`, { method:'DELETE', headers:{'Authorization':`Bearer ${token}`} });
+                if(r.ok) location.reload();
+            });
         });
     }
-
 </script>
 </body>
 </html>
