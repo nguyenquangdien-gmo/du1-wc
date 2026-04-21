@@ -10,3 +10,4 @@ apscheduler
 pytz
 python-dotenv
 beautifulsoup4
+bcrypt==3.2.0
