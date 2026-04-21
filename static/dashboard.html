@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">World Cup Betting</title>
+    <title id="pageTitle">DU1 World Cup</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
@@ -39,7 +39,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark mb-4">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 <span id="navYear">World Cup</span> BETTING</a>
+        <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 <span id="navYear">DU1 World Cup</span></a>
         <div class="d-flex align-items-center">
             <span id="userInfo" class="me-3 text-info small"></span>
             <a id="adminLink" href="/static/admin_matches.html" class="btn btn-warning btn-sm me-2" style="display:none">Cài đặt</a>
@@ -50,7 +50,23 @@
 </nav>
 
 <div class="container pb-5">
-    <h3 class="mb-4 text-center text-uppercase fw-bold letter-spacing-1">Lịch Thi Đấu & Đặt Cược</h3>
+    <div class="d-flex flex-column align-items-center mb-4">
+        <h3 class="text-center text-uppercase fw-bold letter-spacing-1 mb-3">Lịch Thi Đấu</h3>
+        <div class="d-flex gap-3 justify-content-center">
+            <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
+                <input class="form-check-input" type="checkbox" id="showLive" onchange="loadMatches()">
+                <label class="form-check-label text-danger fw-bold ms-2" for="showLive">
+                    🔴 Đang diễn ra
+                </label>
+            </div>
+            <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
+                <input class="form-check-input" type="checkbox" id="showNext6" onchange="loadMatches()">
+                <label class="form-check-label text-info fw-bold ms-2" for="showNext6">
+                    🕒 Hiện 6 trận tiếp theo
+                </label>
+            </div>
+        </div>
+    </div>
     
     <ul class="nav nav-pills justify-content-center mb-4" id="matchTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -92,7 +108,7 @@
     <div class="modal-dialog">
         <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #e94560;">
             <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title fw-bold text-uppercase">Đặt Cược Trận Đấu</h5>
+                <h5 class="modal-title fw-bold text-uppercase">Dự Đoán Kết Quả Trận Đấu</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body text-center">
@@ -105,12 +121,12 @@
                     <button class="btn prediction-btn px-4 py-2" id="btnAway" onclick="selectTeam(this)"></button>
                 </div>
                 
-                <button class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow mt-2" onclick="submitPrediction()">Xác Nhận Đặt Cược</button>
+                <button class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow mt-2" onclick="submitPrediction()">Xác Nhận</button>
 
                 <div id="luckyStarContainer" class="form-check text-start mt-3 mb-3" style="width: max-content; margin: 0 auto; display:none">
                     <input class="form-check-input" type="checkbox" id="luckyStar">
                     <label class="form-check-label text-warning fw-bold" for="luckyStar">
-                        🌟 Sử dụng Ngôi Sao May Mắn (+/- 300k)
+                        🌟 Sử dụng Ngôi Sao May Mắn
                     </label>
                 </div>
 
@@ -208,8 +224,8 @@
         }).fail(() => logout());
 
         $.get('/api/admin/active-year', function(data) {
-            $('#navYear').text("World Cup " + data.year);
-            $('#pageTitle').text("WC " + data.year + " - Betting");
+            $('#navYear').text("DU1 World Cup " + data.year);
+            $('#pageTitle').text("DU1 WC " + data.year);
         });
     }
 
@@ -231,9 +247,33 @@
             };
             Object.values(containers).forEach(c => c.empty());
             
-            let groupStagesDict = {};
-            
-            data.forEach(m => {
+            const isShowNext6 = $('#showNext6').is(':checked');
+            const isShowLive = $('#showLive').is(':checked');
+
+            if (isShowNext6 || isShowLive) {
+                $('#matchTabs').hide();
+                containers['groups'].empty();
+                if (isShowLive) {
+                    containers['groups'].append('<div class="col-12 mt-2 mb-2"><h5 class="text-danger border-start border-danger border-4 ps-2 text-start text-uppercase small fw-bold">Trận đấu đang diễn ra</h5></div>');
+                } else {
+                    containers['groups'].append('<div class="col-12 mt-2 mb-2"><h5 class="text-info border-start border-info border-4 ps-2 text-start text-uppercase small fw-bold">6 Trận đấu tiếp theo</h5></div>');
+                }
+            } else {
+                $('#matchTabs').show();
+            }
+
+            // Sắp xếp: Theo Group Name (A, B, C...) sau đó theo thời gian tăng dần
+            data.sort((a, b) => {
+                if (a.group_name && b.group_name && a.group_name !== b.group_name) {
+                    return a.group_name.localeCompare(b.group_name);
+                }
+                const stageA = (a.stage || "").toLowerCase();
+                const stageB = (b.stage || "").toLowerCase();
+                if (stageA !== stageB) return stageA.localeCompare(stageB);
+                return new Date(a.start_time) - new Date(b.start_time);
+            });
+
+            function getMatchHTML(m) {
                 let badgeClass = '';
                 if (m.status === 'LIVE') badgeClass = 'badge-live';
                 else if (m.status === 'READY') badgeClass = 'badge-ready';
@@ -245,13 +285,17 @@
                     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' 
                 });
                 
+                let groupInfo = m.group_name ? `Bảng ${m.group_name}` : "";
                 let oddsDisplay = m.odds ? `<div class="mt-2"><span class="badge bg-dark border border-warning text-warning fw-normal">Kèo: ${m.odds.favorite_team} chấp ${m.odds.handicap}</span></div>` : '';
 
-                let html = `
+                return `
                 <div class="col-md-6 col-lg-4">
                     <div class="card match-card p-3 h-100 text-center" onclick='openPredictionModal(${JSON.stringify(m)})'>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge ${badgeClass} text-uppercase small" style="font-size: 0.7rem;">${m.status}</span>
+                            <div class="d-flex flex-column align-items-start">
+                                <span class="badge ${badgeClass} text-uppercase mb-1" style="font-size: 0.6rem;">${m.status}</span>
+                                ${groupInfo ? `<span class="badge bg-info text-dark fw-bold" style="font-size: 0.6rem;">${groupInfo}</span>` : ''}
+                            </div>
                             <div class="text-end">
                                 <small class="text-warning d-block fw-bold" style="font-size: 0.75rem;">${m.stadium}</small>
                                 <small class="text-light opacity-50" style="font-size: 0.7rem;">${timeStr}</small>
@@ -261,7 +305,7 @@
                              <div class="d-flex align-items-center justify-content-center gap-2">
                                 <img src="${m.home_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
                                 <span class="fw-bold">${m.home_team_vn || m.home_team}</span>
-                            </div>
+                             </div>
                             <div class="fw-bold fs-3 text-danger my-1">${scoreText}</div>
                             <div class="d-flex align-items-center justify-content-center gap-2">
                                 <img src="${m.away_team_flag}" style="width:24px; height:auto; border-radius:3px; box-shadow: 0 0 5px rgba(0,0,0,0.5)">
@@ -272,25 +316,45 @@
                         ${m.locked ? '<div class="mt-2 text-secondary"><small>🔒 Locked</small></div>' : ''}
                     </div>
                 </div>`;
-                
-                let s = (m.stage || "").toLowerCase();
-                if (s.includes("vòng 32")) { containers['32'].append(html); }
-                else if (s.includes("vòng 16") || s.includes("round of 16")) { containers['16'].append(html); }
-                else if (s.includes("tứ kết") || s.includes("quarter")) { containers['quarter'].append(html); }
-                else if (s.includes("bán kết") || s.includes("semi")) { containers['semi'].append(html); }
-                else if (s.includes("hạng 3") || s.includes("third")) { containers['third'].append(html); }
-                else if (s.includes("chung kết") || s.includes("final")) { containers['final'].append(html); }
-                else {
-                    if (!groupStagesDict[m.stage]) { groupStagesDict[m.stage] = ""; }
-                    groupStagesDict[m.stage] += html;
-                }
-            });
+            }
 
-            // Append Group Stages by table
-            Object.keys(groupStagesDict).sort().forEach(g => {
-                containers['groups'].append(`<div class="col-12 mt-4 mb-2"><h5 class="text-warning border-start border-warning border-4 ps-2 text-start text-uppercase small fw-bold">${g.replace('Group', 'Bảng')}</h5></div>`);
-                containers['groups'].append(groupStagesDict[g]);
-            });
+            if (isShowLive) {
+                let liveMatches = data.filter(m => m.status === 'LIVE');
+                if (liveMatches.length === 0) {
+                    containers['groups'].append('<div class="col-12 text-center py-5 opacity-50">Hiện không có trận đấu nào đang diễn ra.</div>');
+                } else {
+                    liveMatches.forEach(m => containers['groups'].append(getMatchHTML(m)));
+                }
+            } else if (isShowNext6) {
+                let upcoming = data.filter(m => m.status !== 'FINISHED' && m.status !== 'LIVE')
+                                  .sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
+                                  .slice(0, 6);
+                
+                upcoming.forEach(m => {
+                    containers['groups'].append(getMatchHTML(m));
+                });
+            } else {
+                let groupStagesDict = {};
+                data.forEach(m => {
+                    let html = getMatchHTML(m);
+                    let s = (m.stage || "").toLowerCase();
+                    if (s.includes("vòng 32")) { containers['32'].append(html); }
+                    else if (s.includes("vòng 16") || s.includes("round of 16")) { containers['16'].append(html); }
+                    else if (s.includes("tứ kết") || s.includes("quarter")) { containers['quarter'].append(html); }
+                    else if (s.includes("bán kết") || s.includes("semi")) { containers['semi'].append(html); }
+                    else if (s.includes("hạng 3") || s.includes("third")) { containers['third'].append(html); }
+                    else if (s.includes("chung kết") || s.includes("final")) { containers['final'].append(html); }
+                    else {
+                        if (!groupStagesDict[m.stage]) { groupStagesDict[m.stage] = ""; }
+                        groupStagesDict[m.stage] += html;
+                    }
+                });
+
+                Object.keys(groupStagesDict).sort().forEach(g => {
+                    containers['groups'].append(`<div class="col-12 mt-4 mb-2"><h5 class="text-warning border-start border-warning border-4 ps-2 text-start text-uppercase small fw-bold">${g.includes(' - ') ? g.split(' - ')[1] : g}</h5></div>`);
+                    containers['groups'].append(groupStagesDict[g]);
+                });
+            }
 
         }).fail(function(err) {
             if(err.status === 401) logout();

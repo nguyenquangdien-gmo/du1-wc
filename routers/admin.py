@@ -227,6 +227,7 @@ def _process_tournament_import(db: Session, year: int, tournament_data: dict):
             match_no=m["match"], 
             api_match_id=f"WC{str(year)[2:]}-{m['match']:03d}",
             stage=stage_label, 
+            group_name=m.get("group"),
             home_team=m["team1"]["name"], 
             home_team_code=m["team1"].get("code"),
             away_team=m["team2"]["name"], 

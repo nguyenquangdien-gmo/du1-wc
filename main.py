@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     start_scheduler()
     yield
 
-app = FastAPI(title="World Cup 2026 Betting", lifespan=lifespan)
+app = FastAPI(title="World Cup 2026", lifespan=lifespan)
 
 # Include routers
 app.include_router(auth.router)

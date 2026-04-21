@@ -176,6 +176,7 @@ def admin_update_match(match_id: int, data: schemas.AdminMatchUpdate, current_ad
     if data.home_team is not None: match.home_team = data.home_team
     if data.away_team is not None: match.away_team = data.away_team
     if data.stadium is not None: match.stadium = data.stadium
+    if data.group_name is not None: match.group_name = data.group_name
     if data.start_time is not None: match.start_time = data.start_time
     if data.status is not None: match.status = data.status
     if data.locked is not None: match.locked = data.locked

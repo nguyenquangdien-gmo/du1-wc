@@ -64,6 +64,7 @@ class Match(Base):
 
     api_match_id = Column(String, unique=True, index=True)
     stage = Column(String) # e.g., Group Stage, Round of 16, Quarter-Final
+    group_name = Column(String, nullable=True) # e.g. A, B, C...
     start_time = Column(DateTime)
     home_team = Column(String)
     home_team_code = Column(String, nullable=True)

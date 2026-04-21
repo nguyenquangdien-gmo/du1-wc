@@ -90,6 +90,7 @@ class MatchResponse(BaseModel):
     match_no: int
     api_match_id: str
     stage: str
+    group_name: Optional[str] = None
     start_time: datetime
     home_team: str
     home_team_code: Optional[str] = None
@@ -133,6 +134,7 @@ class AdminMatchUpdate(BaseModel):
     away_team: Optional[str] = None
     away_team_code: Optional[str] = None
     stadium: Optional[str] = None
+    group_name: Optional[str] = None
     start_time: Optional[datetime] = None
     status: Optional[str] = None  # SCHEDULED, READY, LIVE, FINISHED
     locked: Optional[bool] = None

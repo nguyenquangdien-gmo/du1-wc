@@ -211,6 +211,7 @@ def extract_matches_from_file(file_path: str, year: int) -> Dict[str, Any]:
             {{
                 "match": 1,
                 "round": "Vòng bảng",
+                "group": "A",
                 "round_order": 1,
                 "team1": {{ "code": "us", "name": "Hoa kỳ" }},
                 "team2": {{ "code": "jp", "name": "Nhật Bản" }},
@@ -226,8 +227,9 @@ def extract_matches_from_file(file_path: str, year: int) -> Dict[str, Any]:
     2. If a team code is missing, try to infer it (e.g., "Germany" -> "de").
     3. Ensure dates are in "DD/MM/YYYY HH:MM" format. Convert to ICT (UTC+7) if the source has a different timezone.
     4. If the data describes a knockout match like "Winner Group A vs Runner-up Group B", use those as names.
-    5. round_order: "Vòng bảng": 1, "Vòng 32": 2, "Vòng 16": 3, "Tứ kết": 4, "Bán kết": 5, "Hạng 3": 6, "Chung kết": 7
-    6. Return ONLY valid JSON.
+    5. group: Extract the group identifier (e.g., "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L") if it's a group stage match.
+    6. round_order: "Vòng bảng": 1, "Vòng 32": 2, "Vòng 16": 3, "Tứ kết": 4, "Bán kết": 5, "Hạng 3": 6, "Chung kết": 7
+    7. Return ONLY valid JSON.
     """
     
     try:
