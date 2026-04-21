@@ -9,14 +9,24 @@ else:
     load_dotenv()
 
 import json
+import logging
 from datetime import datetime
 from database import engine, SessionLocal, Base, models
 
+# Cấu hình log để dễ dàng theo dõi trên Render
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def reset_database():
-    print("Dropping all tables...")
-    Base.metadata.drop_all(bind=engine)
-    print("Creating all tables...")
-    Base.metadata.create_all(bind=engine)
+    try:
+        logger.info("Dropping all tables...")
+        Base.metadata.drop_all(bind=engine)
+        logger.info("Creating all tables...")
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database reset successful.")
+    except Exception as e:
+        logger.error(f"Error resetting database: {e}")
+        raise
 
 def seed_data():
     db = SessionLocal()
@@ -42,20 +52,30 @@ def seed_data():
             print("Countries seeded.")
 
         # 2. Insert Settings
-        db.add(models.Setting(key="penalty_per_loss", value="20000"))
-        db.add(models.Setting(key="lucky_star_amount", value="300000"))
-        db.add(models.Setting(key="default_prediction_time", value="19:00"))
+        settings_to_seed = [
+            {"key": "penalty_per_loss", "value": "20000"},
+            {"key": "lucky_star_amount", "value": "300000"},
+            {"key": "default_prediction_time", "value": "19:00"}
+        ]
+        for s in settings_to_seed:
+            existing_setting = db.query(models.Setting).filter_by(key=s["key"]).first()
+            if not existing_setting:
+                db.add(models.Setting(key=s["key"], value=s["value"]))
         
         # 3. Create Admin User
         from services.auth import get_password_hash
-        admin_user = models.User(
-            email="admin@runsystem.net",
-            full_name="Admin",
-            password_hash=get_password_hash("admin123"),
-            is_active=True,
-            is_admin=True
-        )
-        db.add(admin_user)
+        admin_email = "admin@runsystem.net"
+        existing_admin = db.query(models.User).filter_by(email=admin_email).first()
+        if not existing_admin:
+            admin_user = models.User(
+                email=admin_email,
+                full_name="Admin",
+                password_hash=get_password_hash("admin123"),
+                is_active=True,
+                is_admin=True
+            )
+            db.add(admin_user)
+        
         db.commit()
         print("Data initialized successfully.")
     except Exception as e:

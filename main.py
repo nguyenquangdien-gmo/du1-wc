@@ -25,7 +25,7 @@ def mask_value(val: str) -> str:
     return f"{val[:4]}...{val[-4:]}"
 
 def log_env_status():
-    keys = ["APP_URL", "MAIL_USERNAME", "MAIL_PASSWORD", "BREVO_API_KEY", "GEMINI_API_KEY", "SECRET_KEY"]
+    keys = ["APP_URL", "MAIL_USERNAME", "MAIL_PASSWORD", "BREVO_API_KEY", "GEMINI_API_KEY", "SECRET_KEY", "DATABASE_URL"]
     print("--- KIỂM TRA BIẾN MÔI TRƯỜNG ---")
     for key in keys:
         val = os.environ.get(key)
@@ -34,9 +34,29 @@ def log_env_status():
 
 log_env_status()
 
+from database import engine, Base, models, SessionLocal
+from init_data import seed_data
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Application starting... Initializing scheduler.")
+    print("Application starting... Initializing database & scheduler.")
+    # 1. Tự động tạo bảng nếu chưa có
+    Base.metadata.create_all(bind=engine)
+    
+    # 2. Tự động seed data nếu DB trống (chưa có user nào)
+    db = SessionLocal()
+    try:
+        user_count = db.query(models.User).count()
+        if user_count == 0:
+            print("Database is empty. Running initial seed...")
+            seed_data()
+        else:
+            print(f"Database already has {user_count} users. Skipping seed.")
+    except Exception as e:
+        print(f"Error checking/seeding database: {e}")
+    finally:
+        db.close()
+    
     start_scheduler()
     yield
 
