@@ -9,9 +9,13 @@ raw_url = os.environ.get("DATABASE_URL")
 if not raw_url:
     raise ValueError("LỖI: Biến môi trường DATABASE_URL không được thiết lập. Hệ thống yêu cầu MySQL để vận hành.")
 
-# Tự động sửa lỗi Driver nếu user nhập mysql://
+# Đảm bảo sử dụng driver pymysql cho MySQL
 if raw_url.startswith("mysql://"):
     raw_url = raw_url.replace("mysql://", "mysql+pymysql://", 1)
+elif raw_url.startswith("mysql") and "+pymysql" not in raw_url:
+    # Xử lý trường hợp URL có tiền tố khác nhưng thiếu driver
+    prefix = raw_url.split("://")[0]
+    raw_url = raw_url.replace(prefix, "mysql+pymysql", 1)
 
 # Phân tích URL để loại bỏ các tham số không tương thích (như ssl-mode)
 url = make_url(raw_url)
@@ -33,7 +37,8 @@ if db_ssl:
     if db_ssl_ca and os.path.exists(db_ssl_ca):
         connect_args["ssl"] = {"ca": db_ssl_ca}
     else:
-        connect_args["ssl"] = True
+        # Sử dụng dict trống để kích hoạt SSL mặc định
+        connect_args["ssl"] = {}
 
 # Cấu hình tối ưu cho MySQL
 engine = create_engine(

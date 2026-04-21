@@ -16,8 +16,8 @@ from routers import auth, matches, admin
 from services.scheduler import start_scheduler
 import os
 
-# Create DB tables
-Base.metadata.create_all(bind=engine)
+
+# Create DB tables (Đã chuyển vào lifespan bên dưới để an toàn hơn)
 
 def mask_value(val: str) -> str:
     if not val: return "[Mất/Trống]"
