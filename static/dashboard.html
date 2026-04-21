@@ -29,9 +29,51 @@
         .ui-button:hover { background: #d1304b !important; }
         .ui-dialog-titlebar-close { display: none !important; }
         .ui-widget-overlay { background: rgba(0,0,0,0.7) !important; opacity: 1 !important; }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: opacity 0.3s ease;
+        }
+        .spinner-wc {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #0f3460;
+            border-top: 5px solid #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: #e94560;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
+<!-- Fullscreen Loading Overlay -->
+<div id="loadingOverlay">
+    <div class="spinner-wc"></div>
+    <div class="loading-text">Đang tải dữ liệu World Cup...</div>
+</div>
 
 <div id="dialog-msg" title="Notification" style="display:none">
   <p id="dialog-text"></p>
@@ -235,7 +277,7 @@
         setupAjaxAuth();
         checkUser();
         loadMatches();
-        setInterval(loadMatches, 30000); // refresh every 30s
+        setInterval(() => loadMatches(true), 30000); // refresh every 30s (silent)
     });
 
     function formatUserDisplay(fullName, email) {
@@ -262,7 +304,11 @@
         window.location.href = '/';
     }
 
-    function loadMatches() {
+    function loadMatches(isSilent = false) {
+        if (!isSilent) {
+            $('#loadingOverlay').show().css('opacity', '1');
+        }
+
         $.get('/api/matches', function(data) {
             let containers = {
                 'groups': $('#container-groups'),
@@ -386,6 +432,10 @@
 
         }).fail(function(err) {
             if(err.status === 401) logout();
+        }).always(function() {
+            if (!isSilent) {
+                $('#loadingOverlay').fadeOut(300);
+            }
         });
     }
 

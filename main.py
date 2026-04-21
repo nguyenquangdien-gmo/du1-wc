@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from alembic.config import Config
+from alembic import command
 import os
 
 # Load environment variables from Render secrets path if it exists, otherwise from .env
@@ -39,8 +41,20 @@ from init_data import seed_data
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Khởi tạo database
     print("Application starting... Initializing database & scheduler.")
-    # 1. Tự động tạo bảng nếu chưa có
+    
+    # Chạy Alembic Migrations tự động
+    try:
+        print("Running database migrations...")
+        ini_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
+        alembic_cfg = Config(ini_path)
+        command.upgrade(alembic_cfg, "head")
+        print("Migrations complete.")
+    except Exception as e:
+        print(f"Migration error (this is normal if DB is not ready): {e}")
+
+    # Tạo bảng nếu chưa có (fallback)
     Base.metadata.create_all(bind=engine)
     
     # 2. Tự động seed data nếu DB trống (chưa có user nào)

@@ -65,15 +65,15 @@ class Match(Base):
     api_match_id = Column(String(100), unique=True, index=True)
     stage = Column(String(100)) # e.g., Group Stage, Round of 16, Quarter-Final
     group_name = Column(String(10), nullable=True) # e.g. A, B, C...
-    start_time = Column(DateTime)
+    start_time = Column(DateTime, index=True)
     home_team = Column(String(100))
-    home_team_code = Column(String(10), nullable=True)
+    home_team_code = Column(String(10), nullable=True, index=True)
     away_team = Column(String(100))
-    away_team_code = Column(String(10), nullable=True)
+    away_team_code = Column(String(10), nullable=True, index=True)
     stadium = Column(String(255), default="TBD")
     home_score = Column(Integer, default=None, nullable=True)
     away_score = Column(Integer, default=None, nullable=True)
-    status = Column(String(20), default="SCHEDULED") # SCHEDULED, READY, LIVE, FINISHED
+    status = Column(String(20), default="SCHEDULED", index=True) # SCHEDULED, READY, LIVE, FINISHED
     locked = Column(Boolean, default=False)
     lucky_star_enabled = Column(Boolean, default=False)
 

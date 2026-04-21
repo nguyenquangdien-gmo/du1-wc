@@ -17,29 +17,12 @@ import database.models  # Quan trọng: Import models để Alembic nhận diệ
 # values within the .ini file in use.
 config = context.config
 
-from sqlalchemy.engine import make_url
-
-# Cập nhật URL từ biến môi trường
-db_url = os.environ.get("DATABASE_URL")
-if not db_url:
-    raise ValueError("Alembic yêu cầu biến môi trường DATABASE_URL để thực hiện migrations.")
-
-# Tự động sửa lỗi Driver
-if db_url.startswith("mysql://"):
-    db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
-
-# Phân tích và làm sạch URL
-url_obj = make_url(db_url)
-query = dict(url_obj.query)
-query.pop("ssl-mode", None)
-query.pop("ssl_ca", None)
-clean_url = str(url_obj._replace(query=query))
-
-config.set_main_option("sqlalchemy.url", clean_url)
-
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Import your engine from application
+from database.database import engine as app_engine
 
 # add your model's MetaData object here
 target_metadata = Base.metadata
@@ -81,11 +64,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Su dung engine da duoc cau hinh chuan tu database.py
+    connectable = app_engine
 
     with connectable.connect() as connection:
         context.configure(

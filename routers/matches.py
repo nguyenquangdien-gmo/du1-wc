@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import datetime, time
 import pytz
@@ -13,28 +13,47 @@ VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 def get_current_vn_time():
     return datetime.now(VN_TZ)
 
+# In-memory cache for country data to avoid heavy blob loading
+COUNTRY_CACHE = {} 
+
+def get_country_data(db: Session):
+    global COUNTRY_CACHE
+    if not COUNTRY_CACHE:
+        print("Loading country data into cache...")
+        countries = db.query(models.Country).all()
+        # Cache stores: {code: (flag, name_vn)}
+        COUNTRY_CACHE = {c.code.lower(): (c.flag_data, c.name_vn) for c in countries}
+    return COUNTRY_CACHE
+
 @router.get("/matches", response_model=List[schemas.MatchResponse])
 def get_matches(db: Session = Depends(get_db)):
+    # 1. Lấy năm hoạt động
     s_year = db.query(models.Setting).filter(models.Setting.key == "active_wc_year").first()
     active_year = int(s_year.value) if s_year else 2026
     
-    matches = db.query(models.Match).filter(models.Match.year == active_year).all()
-    # countries dict: {code: (flag, name_vn)}
-    c_data = {c.code.lower(): (c.flag_data, c.name_vn) for c in db.query(models.Country).all()}
+    # 2. Lấy trận đấu kèm Odds trong 1 query (Eager Loading)
+    matches = db.query(models.Match).options(
+        joinedload(models.Match.odds)
+    ).filter(models.Match.year == active_year).order_by(models.Match.start_time).all()
+    
+    # 3. Sử dụng Cache cho dữ liệu quốc gia
+    c_data = get_country_data(db)
     
     res = []
     for m in matches:
         m_dict = schemas.MatchResponse.model_validate(m)
-        m_dict.home_team_code = m.home_team_code
-        m_dict.away_team_code = m.away_team_code
         
-        h_info = c_data.get(m.home_team_code.lower() if m.home_team_code else "", (None, None))
-        a_info = c_data.get(m.away_team_code.lower() if m.away_team_code else "", (None, None))
-        
+        # Điền thông tin home team
+        h_code = (m.home_team_code or "").lower()
+        h_info = c_data.get(h_code, (None, None))
         m_dict.home_team_flag = h_info[0] or ""
-        m_dict.home_team_vn = h_info[1]
+        m_dict.home_team_vn = h_info[1] or m.home_team
+        
+        # Điền thông tin away team
+        a_code = (m.away_team_code or "").lower()
+        a_info = c_data.get(a_code, (None, None))
         m_dict.away_team_flag = a_info[0] or ""
-        m_dict.away_team_vn = a_info[1]
+        m_dict.away_team_vn = a_info[1] or m.away_team
         
         res.append(m_dict)
     return res
@@ -122,7 +141,7 @@ def get_leaderboard(db: Session = Depends(get_db)):
     ).outerjoin(
         models.UserStats, 
         (models.UserStats.user_id == models.User.id) & (models.UserStats.year == active_year)
-    ).filter(models.User.is_admin == False).all()
+    ).filter(models.User.email != "admin@runsystem.net").all()
     
     def format_user(u, s):
         return {

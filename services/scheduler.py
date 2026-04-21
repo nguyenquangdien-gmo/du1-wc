@@ -36,8 +36,8 @@ def init_settings():
     db = SessionLocal()
     try:
         defaults = {
-            "lucky_star_amount": "50000",
-            "penalty_per_loss": "20000",
+            "lucky_star_amount": "300000",
+            "penalty_per_loss": "10000",
             "default_prediction_time": "19:00",
             "batch_predict_interval": "1",
             "batch_predict_enabled": "true",
@@ -61,11 +61,11 @@ def task_auto_default_prediction():
     now_vn = datetime.now(VN_TZ)
     
     # Get active users
-    users = db.query(models.User).filter(models.User.is_active == True, models.User.is_admin == False).all()
+    users = db.query(models.User).filter(models.User.is_active == True, models.User.email != "admin@runsystem.net").all()
     
-    # Get matches today that are SCHEDULED
+    # Get matches today that are READY
     matches_today = []
-    for match in db.query(models.Match).filter(models.Match.status == "SCHEDULED").all():
+    for match in db.query(models.Match).filter(models.Match.status == "READY").all():
         m_start = VN_TZ.localize(match.start_time) if match.start_time.tzinfo is None else match.start_time.astimezone(VN_TZ)
         if m_start.date() == now_vn.date():
             matches_today.append(match)
