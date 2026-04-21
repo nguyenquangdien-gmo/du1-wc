@@ -58,14 +58,11 @@ class StadiumUpdate(BaseModel):
 class SettingUpdate(BaseModel):
     penalty_per_loss: Optional[int] = None
     lucky_star_amount: Optional[int] = None
-    default_prediction_time: Optional[str] = None
     
     batch_predict_interval: Optional[int] = None
     batch_predict_enabled: Optional[bool] = None
-    batch_predict_start_time: Optional[str] = None
     batch_live_interval: Optional[int] = None
     batch_live_enabled: Optional[bool] = None
-    batch_live_start_time: Optional[str] = None
     active_wc_year: Optional[int] = None
     
     # ChatOps Notification Settings
@@ -107,6 +104,7 @@ class MatchResponse(BaseModel):
     away_team_code: Optional[str] = None
     away_team_flag: Optional[str] = None
     stadium: str
+    stadium_country: Optional[str] = None
     home_score: Optional[int]
     away_score: Optional[int]
     status: str

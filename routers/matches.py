@@ -14,8 +14,9 @@ VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 def get_current_vn_time():
     return datetime.now(VN_TZ)
 
-# In-memory cache for country data to avoid heavy blob loading
+# In-memory cache for country and stadium data to avoid heavy blob loading
 COUNTRY_CACHE = {} 
+STADIUM_CACHE = {}
 
 def get_country_data(db: Session):
     global COUNTRY_CACHE
@@ -25,6 +26,15 @@ def get_country_data(db: Session):
         # Cache stores: {code: (flag, name_vn)}
         COUNTRY_CACHE = {c.code.lower(): (c.flag_data, c.name_vn) for c in countries}
     return COUNTRY_CACHE
+
+def get_stadium_data(db: Session):
+    global STADIUM_CACHE
+    if not STADIUM_CACHE:
+        print("Loading stadium data into cache...")
+        stadiums = db.query(models.Stadium).all()
+        # Cache stores: {name: country}
+        STADIUM_CACHE = {s.name: s.country for s in stadiums}
+    return STADIUM_CACHE
 
 @router.get("/matches", response_model=List[schemas.MatchResponse])
 def get_matches(db: Session = Depends(get_db)):
@@ -37,8 +47,9 @@ def get_matches(db: Session = Depends(get_db)):
         joinedload(models.Match.odds)
     ).filter(models.Match.year == active_year).order_by(models.Match.start_time).all()
     
-    # 3. Sử dụng Cache cho dữ liệu quốc gia
+    # 3. Sử dụng Cache cho dữ liệu quốc gia và sân vận động
     c_data = get_country_data(db)
+    s_data = get_stadium_data(db)
     
     # 4. Đếm số lượng bình luận cho từng trận đấu
     comment_counts = {m_id: count for m_id, count in db.query(models.Comment.match_id, sqlalchemy.func.count(models.Comment.id)).group_by(models.Comment.match_id).all()}
@@ -59,6 +70,9 @@ def get_matches(db: Session = Depends(get_db)):
         a_info = c_data.get(a_code, (None, None))
         m_dict.away_team_flag = a_info[0] or ""
         m_dict.away_team_vn = a_info[1] or m.away_team
+        
+        # Điền thông tin stadium country
+        m_dict.stadium_country = s_data.get(m.stadium)
         
         res.append(m_dict)
     return res
@@ -83,16 +97,7 @@ def submit_prediction(
     if prediction_data.use_lucky_star and not match.lucky_star_enabled:
         raise HTTPException(status_code=400, detail="Ngôi sao may mắn chưa được kích hoạt cho trận này")
     
-    # Check limit: before 7 PM UTC+7 on match day
-    now_vn = get_current_vn_time()
-    
-    # ensure start_time is treated as timezone-aware for comparison, or naive but we know it's UTC+7 conceptually.
-    # We will assume stored start_time is naive but represents UTC+7 time.
-    match_start_vn = VN_TZ.localize(match.start_time) if match.start_time.tzinfo is None else match.start_time.astimezone(VN_TZ)
-    
-    # if today is match day, check if it's after 7 PM
-    if now_vn.date() == match_start_vn.date() and now_vn.time() >= time(19, 0):
-        raise HTTPException(status_code=400, detail="Prediction closed after 19:00 on match day")
+    # Match is already checked for READY status and not locked above
 
     # Upsert prediction
     existing_prediction = db.query(models.Prediction).filter(

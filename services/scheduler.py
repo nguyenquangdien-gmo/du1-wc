@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import pytz
 import requests
 import json
+import sqlalchemy
 
 scheduler = BackgroundScheduler()
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
@@ -62,52 +63,24 @@ def init_settings():
     finally:
         db.close()
 
-
-def task_auto_default_prediction():
-    """Run every minute to check if it's past 19:00 VN time on match day and default users"""
-    db = get_db()
-    now_vn = datetime.now(VN_TZ)
-    
-    # Get active users
+def apply_default_predictions(db: Session, match: models.Match):
+    """Set default predictions for users who haven't voted for a specific match before it starts"""
+    # Get active users excluding admin
     users = db.query(models.User).filter(models.User.is_active == True, models.User.email != "admin@runsystem.net").all()
     
-    # Get matches today that are READY
-    matches_today = []
-    for match in db.query(models.Match).filter(models.Match.status == "READY").all():
-        m_start = VN_TZ.localize(match.start_time) if match.start_time.tzinfo is None else match.start_time.astimezone(VN_TZ)
-        if m_start.date() == now_vn.date():
-            matches_today.append(match)
-            
-    if not matches_today: 
-        db.close()
-        return
+    # Find default team (highest handicap equivalent)
+    default_team = match.odds.favorite_team if match.odds else match.home_team
 
-    # Check settings for time
-    time_setting = db.query(models.Setting).filter_by(key="default_prediction_time").first()
-    limit_time_str = time_setting.value if time_setting else "19:00"
-    hour, minute = map(int, limit_time_str.split(':'))
-    limit_time = datetime.now(VN_TZ).replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-    if now_vn >= limit_time:
-        for match in matches_today:
-            if match.locked: continue
-            
-            match.locked = True # Lock predictions for this match
-            
-            # Find default team (highest handicap equivalent)
-            default_team = match.odds.favorite_team if match.odds else match.home_team
-
-            for user in users:
-                pred = db.query(models.Prediction).filter_by(user_id=user.id, match_id=match.id).first()
-                if not pred:
-                    db.add(models.Prediction(
-                        user_id=user.id,
-                        match_id=match.id,
-                        chosen_team=default_team,
-                        use_lucky_star=False
-                    ))
-            db.commit()
-    db.close()
+    for user in users:
+        pred = db.query(models.Prediction).filter_by(user_id=user.id, match_id=match.id).first()
+        if not pred:
+            db.add(models.Prediction(
+                user_id=user.id,
+                match_id=match.id,
+                chosen_team=default_team,
+                use_lucky_star=False
+            ))
+    # We don't commit here, caller should commit
 
 def calculate_winner_asian_handicap(home_team, away_team, home_score, away_score, favorite_team, handicap):
     # Basic asian handicap logic
@@ -130,11 +103,17 @@ def task_live_score_updater():
     db = get_db()
     now_vn = datetime.now(VN_TZ)
 
-    # Start matches
-    for match in db.query(models.Match).filter(models.Match.status == "SCHEDULED").all():
+    # Start matches (SCHEDULED or READY)
+    matches_to_start = db.query(models.Match).filter(models.Match.status.in_(["SCHEDULED", "READY"])).all()
+    for match in matches_to_start:
         m_start = VN_TZ.localize(match.start_time) if match.start_time.tzinfo is None else match.start_time.astimezone(VN_TZ)
         if now_vn >= m_start:
+            # If it was READY, it means betting was open. Lock it and apply defaults.
+            if match.status == "READY":
+                apply_default_predictions(db, match)
+            
             match.status = "LIVE"
+            match.locked = True
             match.home_score = 0
             match.away_score = 0
             db.commit()
@@ -148,11 +127,38 @@ def task_live_score_updater():
         
         if update.get("match_finished", False):
             match.status = "FINISHED"
+            match_date = match.start_time.date()
             # Settle predictions
             settle_match(db, match)
+            db.commit()
             
-        db.commit()
+            # Check and open betting for next matches
+            check_and_ready_next_day(db, match_date)
     db.close()
+
+def check_and_ready_next_day(db: Session, finished_date):
+    """If all matches on finished_date are done, open READY for the next scheduled date"""
+    # 1. Check if all matches on this date are FINISHED
+    # (Assuming naive start_time in DB represents local date)
+    day_matches = db.query(models.Match).filter(sqlalchemy.func.date(models.Match.start_time) == finished_date).all()
+    if all(m.status == "FINISHED" for m in day_matches):
+        print(f"All matches on {finished_date} finished. Looking for next available match day...")
+        # 2. Find the earliest date > finished_date that has SCHEDULED matches
+        next_match = db.query(models.Match).filter(
+            sqlalchemy.func.date(models.Match.start_time) > finished_date,
+            models.Match.status == "SCHEDULED"
+        ).order_by(models.Match.start_time).first()
+        
+        if next_match:
+            next_date = next_match.start_time.date()
+            print(f"Opening betting for matches on {next_date}")
+            next_day_matches = db.query(models.Match).filter(
+                sqlalchemy.func.date(models.Match.start_time) == next_date,
+                models.Match.status == "SCHEDULED"
+            ).all()
+            for nm in next_day_matches:
+                nm.status = "READY"
+            db.commit()
 
 def settle_match(db: Session, match: models.Match):
     penalty_setting = db.query(models.Setting).filter_by(key="penalty_per_loss").first()
@@ -280,7 +286,22 @@ def task_match_notifications():
 
 def run_batch_predict_manual():
     print(f"Manual Batch PREDICT triggered at {datetime.now(VN_TZ)}")
-    task_auto_default_prediction()
+    db = SessionLocal()
+    try:
+        # Lấy các trận READY của năm hiện tại
+        s_year = db.query(models.Setting).filter(models.Setting.key == "active_wc_year").first()
+        active_year = int(s_year.value) if s_year else 2026
+        
+        matches = db.query(models.Match).filter(
+            models.Match.year == active_year,
+            models.Match.status == "READY"
+        ).all()
+        
+        for m in matches:
+            apply_default_predictions(db, m)
+        db.commit()
+    finally:
+        db.close()
     return True
 
 def run_batch_live_manual():
@@ -295,38 +316,24 @@ def sync_scheduler_settings():
         s_dict = {s.key: s.value for s in settings}
         
 
-        # Sync Predict Job
-        predict_interval = s_dict.get('batch_predict_interval', 1)
-        predict_enabled = s_dict.get('batch_predict_enabled', 'true') == 'true'
-        predict_start_time = s_dict.get('batch_predict_start_time', s_dict.get('default_prediction_time', '19:00'))
-        
-        job_predict = scheduler.get_job('batch_predict')
-        if job_predict:
-            scheduler.reschedule_job('batch_predict', trigger='interval', minutes=int(predict_interval), start_date=get_next_run_time(predict_start_time))
-            if predict_enabled: scheduler.resume_job('batch_predict')
-            else: scheduler.pause_job('batch_predict')
-        else:
-            scheduler.add_job(task_auto_default_prediction, 'interval', minutes=int(predict_interval), id='batch_predict', start_date=get_next_run_time(predict_start_time))
-
         # Sync Live Job
         live_interval = s_dict.get('batch_live_interval', 5)
         live_enabled = s_dict.get('batch_live_enabled', 'true') == 'true'
-        live_start_time = s_dict.get('batch_live_start_time', '19:00')
         
         job_live = scheduler.get_job('batch_live')
         if job_live:
-            scheduler.reschedule_job('batch_live', trigger='interval', minutes=int(live_interval), start_date=get_next_run_time(live_start_time))
+            scheduler.reschedule_job('batch_live', trigger='interval', minutes=int(live_interval))
             if live_enabled: scheduler.resume_job('batch_live')
             else: scheduler.pause_job('batch_live')
         else:
-            scheduler.add_job(task_live_score_updater, 'interval', minutes=int(live_interval), id='batch_live', start_date=get_next_run_time(live_start_time))
+            scheduler.add_job(task_live_score_updater, 'interval', minutes=int(live_interval), id='batch_live')
         
         # Sync Notification Job
         job_notify = scheduler.get_job('match_notifications')
         mattermost_enabled = s_dict.get('mattermost_enabled', 'false') == 'true'
         
         if not job_notify:
-            scheduler.add_job(task_match_notifications, 'interval', minutes=1, id='match_notifications')
+            scheduler.add_job(task_match_notifications, 'interval', minutes=5, id='match_notifications')
             job_notify = scheduler.get_job('match_notifications')
 
         if mattermost_enabled:

@@ -146,18 +146,13 @@ def update_settings(data: schemas.SettingUpdate, db: Session = Depends(get_db), 
         s = db.query(models.Setting).filter(models.Setting.key == "lucky_star_amount").first()
         if s: s.value = str(data.lucky_star_amount)
 
-    if data.default_prediction_time is not None:
-        s = db.query(models.Setting).filter(models.Setting.key == "default_prediction_time").first()
-        if s: s.value = str(data.default_prediction_time)
 
     # Batch & ChatOps Settings
     fields = [
         ('batch_predict_interval', data.batch_predict_interval),
         ('batch_predict_enabled', data.batch_predict_enabled),
-        ('batch_predict_start_time', data.batch_predict_start_time),
         ('batch_live_interval', data.batch_live_interval),
         ('batch_live_enabled', data.batch_live_enabled),
-        ('batch_live_start_time', data.batch_live_start_time),
         ('active_wc_year', data.active_wc_year),
         ('mattermost_enabled', data.mattermost_enabled),
         ('mattermost_url', data.mattermost_url),

@@ -54,8 +54,7 @@ def seed_data():
         # 2. Insert Settings
         settings_to_seed = [
             {"key": "penalty_per_loss", "value": "20000"},
-            {"key": "lucky_star_amount", "value": "300000"},
-            {"key": "default_prediction_time", "value": "19:00"}
+            {"key": "lucky_star_amount", "value": "300000"}
         ]
         for s in settings_to_seed:
             existing_setting = db.query(models.Setting).filter_by(key=s["key"]).first()

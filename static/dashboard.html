@@ -56,9 +56,9 @@
         /* Modal & Dialog position fix */
         .modal-dialog { margin-top: 90px !important; }
         .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 3000 !important; top: 100px !important; }
-        .ui-dialog-titlebar { background: #0f3460 !important; border: none !important; color: #e94560 !important; font-weight: bold !important; padding: 12px 20px !important; }
+        .ui-dialog-titlebar { background: #0f3460 !important; border: none !important; color: #e94560 !important; font-weight: bold !important; padding: 12px 20px !important; border-radius: 12px 12px 0 0 !important; }
         .ui-dialog-content { padding: 20px !important; font-size: 1rem !important; color: #e0e0e0 !important; }
-        .ui-dialog-buttonpane { background: #0f3460 !important; border-top: 1px solid #2a5298 !important; padding: 10px 20px !important; }
+        .ui-dialog-buttonpane { background: #0f3460 !important; border-top: 1px solid #2a5298 !important; padding: 10px 20px !important; border-radius: 0 0 12px 12px !important; }
         .ui-button { background: #e94560 !important; color: white !important; border: none !important; border-radius: 6px !important; padding: 6px 20px !important; font-weight: 600 !important; }
         .ui-button:hover { background: #d1304b !important; }
         .ui-dialog-titlebar-close { display: none !important; }
@@ -233,6 +233,7 @@
         <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 <span id="navYear">DU1 World Cup</span></a>
         <div class="d-flex align-items-center">
             <span id="userInfo" class="me-3 text-info small"></span>
+            <a href="/static/help.html" class="btn btn-outline-light btn-sm me-2">Trợ giúp</a>
             <button class="btn btn-outline-info btn-sm me-2" onclick="openAccountSettingsModal()">Cài đặt</button>
             <a id="adminLink" href="/static/admin_matches.html" class="btn btn-warning btn-sm me-2" style="display:none">Admin</a>
             <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
@@ -340,6 +341,7 @@
                 </div>
                 
                 <button class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow mt-2" id="btnSubmitPredict" onclick="submitPrediction()">Xác Nhận</button>
+                <div id="predictStatusMsg" class="alert alert-warning py-2 mt-2 shadow-sm" style="display:none; font-size: 0.85rem; border-left: 4px solid #f39c12;"></div>
 
                 <div id="luckyStarContainer" class="form-check text-start mt-3 mb-3" style="width: max-content; margin: 0 auto; display:none">
                     <input class="form-check-input" type="checkbox" id="luckyStar">
@@ -652,7 +654,7 @@
                                     ${groupInfo ? `<span class="badge bg-info text-dark fw-bold" style="font-size: 0.6rem;">${groupInfo}</span>` : ''}
                                 </div>
                                 <div class="text-end">
-                                    <small class="text-warning d-block fw-bold" style="font-size: 0.75rem;">${m.stadium}</small>
+                                    <small class="text-warning d-block fw-bold" style="font-size: 0.75rem;">${m.stadium}${m.stadium_country ? ', ' + m.stadium_country : ''}</small>
                                     <small class="text-light opacity-50" style="font-size: 0.7rem;">${timeStr}</small>
                                 </div>
                             </div>
@@ -768,13 +770,22 @@
 
         $('#btnHome, #btnAway, #btnDraw, #luckyStar, #btnSubmitPredict').prop('disabled', isLocked);
         
+        // Show status message
+        if (match.status === 'SCHEDULED') {
+            $('#predictStatusMsg').text("Trận đấu chưa tới giờ bình chọn").show();
+        } else if (match.status === 'LIVE' || match.status === 'FINISHED') {
+            $('#predictStatusMsg').text("Trận đấu đã qua giai đoạn bình chọn.").show();
+        } else {
+            $('#predictStatusMsg').hide();
+        }
+        
         // Specifically block admin@runsystem.net from voting as requested
         if (currentUser && currentUser.email === 'admin@runsystem.net') {
             $('#btnSubmitPredict').hide();
-        } else if (currentUser && currentUser.is_admin) {
-            $('#btnSubmitPredict').show().prop('disabled', false);
-        } else {
+        } else if (match.status === 'READY' && !match.locked) {
             $('#btnSubmitPredict').show();
+        } else {
+            $('#btnSubmitPredict').hide();
         }
         
         if (match.lucky_star_enabled && match.status === 'READY') {

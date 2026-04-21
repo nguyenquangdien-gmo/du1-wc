@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trợ giúp & Hướng dẫn | World Cup 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0f3460;
+            --secondary-bg: #1a1a2e;
+            --accent-color: #e94560;
+            --text-main: #ffffff;
+            --text-dim: #94a3b8;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--secondary-bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(233, 69, 96, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(15, 52, 96, 0.2) 0%, transparent 40%);
+            padding-bottom: 50px;
+        }
+
+        .navbar {
+            background: rgba(26, 26, 46, 0.8) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 15px 0;
+        }
+
+        .help-container {
+            max-width: 1000px;
+            margin-top: 120px;
+        }
+
+        .help-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .help-header h1 {
+            font-weight: 700;
+            background: linear-gradient(45deg, #fff, #e94560);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .role-section {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .role-section:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .role-icon {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .feature-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .feature-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-desc {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-ready { background: #059669; color: #fff; }
+        .badge-live { background: #dc2626; color: #fff; animation: pulse 2s infinite; }
+        .badge-scheduled { background: #4b5563; color: #fff; }
+        .badge-finished { background: #1e40af; color: #fff; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 10px 25px;
+            border-radius: 12px;
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-back:hover {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .policy-item {
+            border-left: 3px solid #e94560;
+            padding-left: 15px;
+            margin-bottom: 15px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container text-center justify-content-center">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                <img src="https://www.fifa.com/static-assets/fifa-logo.svg" alt="WC" height="30" style="filter: brightness(0) invert(1);">
+                <span class="fw-bold text-white">WORLD CUP 2026 HELP</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container help-container">
+        <div class="help-header">
+            <h1>Hướng dẫn & Quy định</h1>
+            <p class="text-muted">Chào mừng bạn đến với hệ thống dự đoán kết quả World Cup 2026 của DU1.</p>
+            <div class="d-flex gap-3 justify-content-center mt-3">
+                <a href="/static/index.html" class="btn-back">
+                    <i class="fas fa-sign-in-alt"></i> Trang Đăng nhập
+                </a>
+                <a href="/static/dashboard.html" class="btn-back">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Section Account -->
+        <div class="role-section">
+            <div class="role-icon"><i class="fas fa-id-card"></i></div>
+            <h2 class="mb-4">Tài khoản & Đăng ký</h2>
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-envelope"></i> Sử dụng Email Runsystem</div>
+                <div class="feature-desc">
+                    Mọi người chơi sử dụng **username runsystem** để đăng ký/đăng nhập. 
+                    <br/>- Bạn có thể **bỏ đuôi @runsystem.net** khi nhập liệu, hệ thống sẽ tự động nhận diện.
+                    <br/>- Sau khi đăng ký, hãy kiểm tra hòm thư runsystem và mở link kích hoạt để bắt đầu sử dụng.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-signature"></i> Tên hiển thị cá nhân</div>
+                <div class="feature-desc">
+                    Yêu cầu đặt tên thật hoặc tên có ý nghĩa nhận diện rõ ràng. Cá nhân đặt tên không rõ ràng hoặc mang tính chất giả mạo sẽ bị Admin xóa tài khoản mà không cần báo trước.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: User -->
+        <div class="role-section">
+            <div class="role-icon"><i class="fas fa-user-circle"></i></div>
+            <h2 class="mb-4">Dành cho Người chơi (VĐV)</h2>
+            
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-chart-line"></i> Trạng thái trận đấu</div>
+                <div class="feature-desc">
+                    Hệ thống chia trận đấu thành các giai đoạn:
+                    <div class="mt-2">
+                        <span class="badge-status badge-scheduled">Scheduled</span>: Chưa tới giờ bình chọn.<br/>
+                        <span class="badge-status badge-ready">Ready</span>: Đã mở cổng bình chọn.<br/>
+                        <span class="badge-status badge-live">Live</span>: Đang thi đấu - Cổng bình chọn đã khóa.<br/>
+                        <span class="badge-status badge-finished">Finished</span>: Trận đấu đã kết thúc và tính điểm.<br/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-vote-yea"></i> Quy trình Dự đoán</div>
+                <div class="feature-desc">
+                    - Bạn chỉ có thể đặt dự đoán khi trận đấu ở trạng thái <span class="badge-status badge-ready">Ready</span>. 
+                    <br/>- Lựa chọn bao gồm: **Đội nhà thắng**, **Đội khách thắng**, hoặc **Hòa**.
+                    <br/>- Bạn có thể thay đổi lựa chọn nhiều lần tùy ý trước khi trận đấu bắt đầu. 
+                    <br/>- Khi trận đấu chuyển sang <span class="badge-status badge-live">Live</span>, dự đoán sẽ được chốt tự động.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-star"></i> Ngôi sao hy vọng (Lucky Star)</div>
+                <div class="feature-desc">
+                    - **Chỉ áp dụng duy nhất cho trận CHUNG KẾT.**
+                    <br/>- Sử dụng để nhân đôi điểm thưởng khi bạn tin tưởng tuyệt đối vào kết quả dự đoán của mình.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-comments"></i> Văn hóa Bình luận</div>
+                <div class="feature-desc">
+                    Hệ thống cho phép bình luận và bày tỏ phản ứng (icon) cho từng trận đấu. 
+                    <br/>- Yêu cầu: Ngôn ngữ đúng chuẩn, văn minh.
+                    <br/>- **CẤM**: Các từ ngữ công kích cá nhân, gây thù hằn, mất đoàn kết nội bộ. Các vi phạm sẽ bị khóa tài khoản vĩnh viễn.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Rules -->
+        <div class="role-section">
+            <div class="role-icon"><i class="fas fa-gavel"></i></div>
+            <h2 class="mb-4">Quy định & Chính sách</h2>
+            <div class="policy-item">
+                <div class="fw-bold text-white mb-2">Sự tham gia của các thành viên DU1</div>
+                <p class="feature-desc">Tất cả các thành viên thuộc DU1 đều phải tham gia hệ thống này. Những trường hợp không tham gia sẽ bị thu phí bằng với số tiền của người chơi thua nhiều nhất trong mùa giải.</p>
+            </div>
+            <div class="policy-item">
+                <div class="fw-bold text-white mb-2">Quyền quyết định của Admin</div>
+                <p class="feature-desc">Trong mọi trường hợp tranh chấp hoặc sự cố kỹ thuật, Quản trị viên (Admin) là người đưa ra quyết định cuối cùng và có hiệu lực ngay lập tức.</p>
+            </div>
+        </div>
+
+        <!-- Section 2: Admin -->
+        <div class="role-section">
+            <div class="role-icon"><i class="fas fa-user-shield"></i></div>
+            <h2 class="mb-4">Dành cho Quản trị viên (Admin)</h2>
+            
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-tasks"></i> Quản trị Trận đấu</div>
+                <div class="feature-desc">
+                    - Import/Cập nhật dữ liệu trận đấu và sân vận động.
+                    - Chuyển trạng thái trận bấu sang `Ready` để kích hoạt dự đoán cho người chơi.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title"><i class="fas fa-cogs"></i> Hệ thống Batch & Thiết lập</div>
+                <div class="feature-desc">
+                    - Cấu hình chu kỳ cập nhật tỉ số trực tiếp.
+                    - Thiết lập mức phạt thua trận, mức thưởng Lucky Star.
+                    - Tích hợp Mattermost để gửi thông báo tự động (Kickoff, Bàn thắng, Kết quả).
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 World Cup Prediction System. Designed for DU1 RunSystem.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
