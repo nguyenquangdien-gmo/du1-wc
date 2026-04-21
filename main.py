@@ -38,6 +38,9 @@ os.makedirs("static", exist_ok=True)
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
 @app.get("/")
 def serve_frontend():
