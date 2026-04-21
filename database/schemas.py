@@ -145,4 +145,6 @@ class AdminMatchUpdate(BaseModel):
     odds_favorite_team: Optional[str] = None
     odds_underdog_team: Optional[str] = None
     odds_handicap: Optional[float] = None
-    odds_analysis_text: Optional[str] = None
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str

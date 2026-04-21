@@ -47,6 +47,29 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_admin: mode
     db.commit()
     return {"message": "Đã xóa người dùng thành công."}
 
+@router.post("/users/{user_id}/reset-password")
+def reset_user_password(user_id: int, db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy người dùng.")
+    
+    import secrets
+    import string
+    from services.auth import get_password_hash
+    from services.email_service import send_password_reset_email_async
+
+    # Generate random 8-character password
+    alphabet = string.ascii_letters + string.digits
+    new_password = ''.join(secrets.choice(alphabet) for _ in range(8))
+    
+    user.password_hash = get_password_hash(new_password)
+    db.commit()
+    
+    # Send email notification
+    send_password_reset_email_async(user.email, new_password)
+    
+    return {"message": f"Đã reset mật khẩu cho {user.email} thành công. Mật khẩu mới đã được gửi qua email."}
+
 # --- COUNTRY MANAGEMENT ---
 @router.get("/countries", response_model=List[schemas.CountryResponse])
 def get_all_countries_admin(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):

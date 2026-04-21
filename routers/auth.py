@@ -141,3 +141,12 @@ def read_users_me(db: Session = Depends(get_db), current_user: models.User = Dep
         res.money_lost = stats.money_lost
         
     return res
+
+@router.post("/change-password")
+def change_password(data: schemas.ChangePasswordRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    if not verify_password(data.old_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mật khẩu cũ không chính xác.")
+    
+    current_user.password_hash = get_password_hash(data.new_password)
+    db.commit()
+    return {"message": "Đổi mật khẩu thành công!"}

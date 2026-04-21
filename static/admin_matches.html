@@ -688,6 +688,7 @@
                             <input type="checkbox" ${u.is_admin ? 'checked' : ''} onchange="updateUser(${u.id}, 'is_admin', this.checked)">
                         </td>
                         <td class="text-end">
+                            <button class="btn btn-sm btn-outline-warning me-1" onclick="resetPassword(${u.id}, '${u.email}')">Reset Pass</button>
                             <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${u.id}, '${u.email}')">Xóa</button>
                         </td>
                     </tr>
@@ -717,6 +718,21 @@
                 },
                 error: function(err) {
                     showMsg(err.responseJSON?.detail || "Xóa người dùng thất bại", "Lỗi");
+                }
+            });
+        });
+    }
+
+    function resetPassword(id, email) {
+        showConfirm(`Bạn có chắc muốn reset mật khẩu của người dùng <b>${email}</b>? Mật khẩu mới sẽ sinh ngẫu nhiên và gửi tới email này.`, "Xác nhận Reset Mật khẩu", () => {
+            $.ajax({
+                url: `/api/admin/users/${id}/reset-password`,
+                type: 'POST',
+                success: function(res) {
+                    showMsg(res.message, "Thành công");
+                },
+                error: function(err) {
+                    showMsg(err.responseJSON?.detail || "Reset mật khẩu thất bại", "Lỗi");
                 }
             });
         });

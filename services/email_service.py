@@ -22,15 +22,8 @@ def send_otp_email_async(receiver_email: str, otp: str):
         
         current_year = datetime.now().year
         payload = {
-            "sender": {
-                "name": f"Hệ thống dự đoán WC{current_year}",
-                "email": sender_email
-            },
-            "to": [
-                {
-                    "email": receiver_email
-                }
-            ],
+            "sender": {"name": f"Hệ thống DU1-WC{current_year}", "email": sender_email},    
+            "to": [{"email": receiver_email}],
             "subject": f'Kích hoạt tài khoản DU1-WC{current_year} của bạn',
             "htmlContent": f"""
             <html>
@@ -70,3 +63,48 @@ def send_otp_email_async(receiver_email: str, otp: str):
     # Chạy việc gửi email trong luồng riêng biệt để tránh làm chặn API response
     threading.Thread(target=send_email).start()
 
+def send_password_reset_email_async(receiver_email: str, new_password: str):
+    def send_email():
+        sender_email = os.environ.get("MAIL_USERNAME", "gmo_hcm@runsystem.vn")
+        api_key = os.environ.get("BREVO_API_KEY") or os.environ.get("MAIL_PASSWORD", "")
+        api_key = api_key.strip()
+        
+        if not api_key or sender_email == "your_email@gmail.com":
+            print(f"DEBUG (No Mail Config): Reset mật khẩu cho {receiver_email}. Mật khẩu mới: {new_password}")
+            return
+            
+        url = "https://api.brevo.com/v3/smtp/email"
+        current_year = datetime.now().year
+        payload = {
+            "sender": {"name": f"Hệ thống DU1-WC{current_year}", "email": sender_email},
+            "to": [{"email": receiver_email}],
+            "subject": f'Mật khẩu truy cập DU1-WC{current_year} của bạn đã được reset',
+            "htmlContent": f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #e94560;">Thông báo Reset Mật khẩu</h2>
+                    <p>Chào bạn,</p>
+                    <p>Admin đã đặt lại mật khẩu cho tài khoản <strong>{receiver_email}</strong> của bạn.</p>
+                    <p>Mật khẩu mới của bạn là: <span style="font-size: 1.2em; font-weight: bold; color: #e94560; background: #eee; padding: 5px 10px; border-radius: 4px;">{new_password}</span></p>
+                    <p>Vui lòng đăng nhập và <strong>đổi mật khẩu ngay lập tức</strong> để đảm bảo an toàn.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 0.8em; color: #888;">Đây là email tự động, vui lòng không trả lời.</p>
+                </body>
+            </html>
+            """
+        }
+        
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={
+            'api-key': api_key,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }, method='POST')
+
+        try:
+            with urllib.request.urlopen(req) as response:
+                print(f"INFO: Đã gửi email reset password tới {receiver_email}")
+        except Exception as e:
+            print(f"ERROR: Lỗi gửi email reset password: {e}")
+            
+    threading.Thread(target=send_email).start()

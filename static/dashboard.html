@@ -42,6 +42,7 @@
         <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 <span id="navYear">DU1 World Cup</span></a>
         <div class="d-flex align-items-center">
             <span id="userInfo" class="me-3 text-info small"></span>
+            <button class="btn btn-outline-info btn-sm me-2" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
             <a id="adminLink" href="/static/admin_matches.html" class="btn btn-warning btn-sm me-2" style="display:none">Cài đặt</a>
             <button class="btn btn-outline-light btn-sm me-2" onclick="loadLeaderboard()" data-bs-toggle="modal" data-bs-target="#leaderboardModal">BXH</button>
             <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
@@ -163,6 +164,33 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #0f3460;">
+            <div class="modal-header border-bottom border-info">
+                <h5 class="modal-title fw-bold">🔐 Đổi Mật Khẩu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small text-uppercase">Mật khẩu cũ</label>
+                    <input type="password" id="oldPassword" class="form-control bg-dark text-white border-secondary">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-uppercase">Mật khẩu mới</label>
+                    <input type="password" id="newPassword" class="form-control bg-dark text-white border-secondary">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-uppercase">Xác nhận mật khẩu mới</label>
+                    <input type="password" id="confirmNewPassword" class="form-control bg-dark text-white border-secondary">
+                </div>
+                <button class="btn btn-info w-100 fw-bold text-white shadow-sm mt-2" onclick="submitChangePassword()">Cập nhật mật khẩu</button>
             </div>
         </div>
     </div>
@@ -504,6 +532,36 @@
                     <td class="text-end pe-3 text-warning fw-bold">-${u.money_lost.toLocaleString()}</td>
                 </tr>
             `);
+        });
+    }
+
+    function openChangePasswordModal() {
+        $('#oldPassword, #newPassword, #confirmNewPassword').val('');
+        new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+    }
+
+    function submitChangePassword() {
+        let oldPass = $('#oldPassword').val();
+        let newPass = $('#newPassword').val();
+        let confirmPass = $('#confirmNewPassword').val();
+
+        if (!oldPass || !newPass) return showMsg('Vui lòng nhập đầy đủ thông tin');
+        if (newPass !== confirmPass) return showMsg('Mật khẩu mới không khớp nhau');
+        if (newPass.length < 6) return showMsg('Mật khẩu mới phải có ít nhất 6 ký tự');
+
+        $.ajax({
+            url: "/api/auth/change-password",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ old_password: oldPass, new_password: newPass }),
+            success: function(res) {
+                showMsg(res.message, "Thành công", () => {
+                   bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                });
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Đổi mật khẩu thất bại", "Lỗi");
+            }
         });
     }
 </script>
