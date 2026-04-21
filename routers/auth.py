@@ -164,3 +164,9 @@ def change_password(data: schemas.ChangePasswordRequest, db: Session = Depends(g
     current_user.password_hash = get_password_hash(data.new_password)
     db.commit()
     return {"message": "Đổi mật khẩu thành công!"}
+
+@router.post("/update-profile")
+def update_profile(data: schemas.ProfileUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    current_user.full_name = data.full_name
+    db.commit()
+    return {"message": "Cập nhật thông tin thành công!"}

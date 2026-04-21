@@ -8,8 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <style>
-        body { background-color: #1a1a2e; color: white; font-family: 'Outfit', sans-serif; }
-        .navbar { background-color: #0f3460; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); border-bottom: 2px solid #e94560; }
+        body { background-color: #1a1a2e; color: white; font-family: 'Outfit', sans-serif; padding-top: 75px; }
+        .navbar { background-color: #000; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.8); border-bottom: 2px solid #e94560; z-index: 1030; }
         .card { background-color: #16213e; border: 1px solid #0f3460; border-radius: 12px; color: white !important; }
         .match-card { transition: 0.3s; cursor: pointer; border: 1px solid #1a1a2e; }
         .match-card:hover { transform: translateY(-5px); border-color: #e94560; box-shadow: 0px 8px 25px rgba(233, 69, 96, 0.2); }
@@ -20,8 +20,9 @@
         .prediction-btn { background-color: #0f3460; border: 1px solid #2a5298; color: white; border-radius: 8px; font-weight: 500; transition: 0.2s; }
         .prediction-btn:hover, .prediction-btn.active { background-color: #e94560; border-color: #e94560; color: white; box-shadow: 0 0 10px rgba(233, 69, 96, 0.4); }
         
-        /* Custom jQuery UI Dialog Styles */
-        .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 1100 !important; }
+        /* Modal & Dialog position fix */
+        .modal-dialog { margin-top: 90px !important; }
+        .ui-dialog { background-color: #16213e !important; color: white !important; border: 1px solid #e94560 !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important; padding: 0 !important; z-index: 3000 !important; top: 100px !important; }
         .ui-dialog-titlebar { background: #0f3460 !important; border: none !important; color: #e94560 !important; font-weight: bold !important; padding: 12px 20px !important; }
         .ui-dialog-content { padding: 20px !important; font-size: 1rem !important; color: #e0e0e0 !important; }
         .ui-dialog-buttonpane { background: #0f3460 !important; border-top: 1px solid #2a5298 !important; padding: 10px 20px !important; }
@@ -66,6 +67,110 @@
             text-transform: uppercase;
             font-size: 0.9rem;
         }
+
+        /* Sidebar Leaderboard */
+        .sidebar-right {
+            position: fixed;
+            top: 75px; /* Below Navbar */
+            right: -350px;
+            width: 350px;
+            height: calc(100vh - 75px);
+            background-color: #16213e;
+            z-index: 1060;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 1px solid #e94560;
+            overflow: visible; /* To allow toggle tab to be visible */
+            padding: 15px 0;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-right.open {
+            right: 0;
+        }
+        
+        /* Toggle Tab */
+        .sidebar-toggle-tab {
+            position: absolute;
+            left: -32px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 80px;
+            background-color: #e94560;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 8px 0 0 8px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+            font-size: 1.2rem;
+            z-index: 1061;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        #mainContent {
+            transition: margin-right 0.3s ease;
+        }
+        
+        /* Desktop: Fixed by default */
+        @media (min-width: 992px) {
+            .sidebar-right.open {
+                right: 0;
+            }
+            #mainContent.shifted {
+                margin-right: 350px;
+            }
+        }
+
+        @media (max-width: 991px) {
+            .sidebar-right { width: 100%; right: -100%; top: 75px; }
+            .sidebar-right.open { right: 0; }
+            #mainContent { margin-right: 0 !important; }
+        }
+
+        /* Sticky Header for Leaderboard */
+        .sidebar-scroll {
+            overflow-y: auto;
+            flex-grow: 1;
+            height: 100%;
+        }
+        .sidebar-scroll table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .sidebar-scroll thead th {
+            position: sticky;
+            top: 0;
+            background-color: #0f3460 !important;
+            z-index: 20;
+            outline: 1px solid #e94560;
+        }
+
+        /* Utility for button loading */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+            pointer-events: none;
+        }
+        .btn-loading::after {
+            content: "";
+            position: absolute;
+            width: 1.2rem;
+            height: 1.2rem;
+            top: 50%;
+            left: 50%;
+            margin-top: -0.6rem;
+            margin-left: -0.6rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -79,72 +184,98 @@
   <p id="dialog-text"></p>
 </div>
 
-<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top mb-4">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 <span id="navYear">DU1 World Cup</span></a>
         <div class="d-flex align-items-center">
             <span id="userInfo" class="me-3 text-info small"></span>
-            <button class="btn btn-outline-info btn-sm me-2" onclick="openChangePasswordModal()">Đổi mật khẩu</button>
-            <a id="adminLink" href="/static/admin_matches.html" class="btn btn-warning btn-sm me-2" style="display:none">Cài đặt</a>
-            <button class="btn btn-outline-light btn-sm me-2" onclick="loadLeaderboard()" data-bs-toggle="modal" data-bs-target="#leaderboardModal">BXH</button>
+            <button class="btn btn-outline-info btn-sm me-2" onclick="openAccountSettingsModal()">Cài đặt</button>
+            <a id="adminLink" href="/static/admin_matches.html" class="btn btn-warning btn-sm me-2" style="display:none">Admin</a>
             <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
         </div>
     </div>
 </nav>
 
-<div class="container pb-5">
-    <div class="d-flex flex-column align-items-center mb-4">
-        <h3 class="text-center text-uppercase fw-bold letter-spacing-1 mb-3">Lịch Thi Đấu</h3>
-        <div class="d-flex gap-3 justify-content-center">
-            <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
-                <input class="form-check-input" type="checkbox" id="showLive" onchange="loadMatches()">
-                <label class="form-check-label text-danger fw-bold ms-2" for="showLive">
-                    🔴 Đang diễn ra
-                </label>
+    <div id="mainContent">
+        <div class="container pb-5">
+            <div class="d-flex flex-column align-items-center mb-4">
+                <h3 class="text-center text-uppercase fw-bold letter-spacing-1 mb-3">Lịch Thi Đấu</h3>
+                <div class="d-flex gap-3 justify-content-center">
+                    <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
+                        <input class="form-check-input" type="checkbox" id="showLive" onchange="loadMatches()">
+                        <label class="form-check-label text-danger fw-bold ms-2" for="showLive">
+                            🔴 Đang diễn ra
+                        </label>
+                    </div>
+                    <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
+                        <input class="form-check-input" type="checkbox" id="showNext6" onchange="loadMatches()">
+                        <label class="form-check-label text-info fw-bold ms-2" for="showNext6">
+                            🕒 Hiện 6 trận tiếp theo
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
-                <input class="form-check-input" type="checkbox" id="showNext6" onchange="loadMatches()">
-                <label class="form-check-label text-info fw-bold ms-2" for="showNext6">
-                    🕒 Hiện 6 trận tiếp theo
-                </label>
+            
+            <ul class="nav nav-pills justify-content-center mb-4" id="matchTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-groups-btn" data-bs-toggle="pill" data-bs-target="#tab-groups" type="button" role="tab">Vòng Bảng</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-32-btn" data-bs-toggle="pill" data-bs-target="#tab-32" type="button" role="tab">Vòng 32</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-16-btn" data-bs-toggle="pill" data-bs-target="#tab-16" type="button" role="tab">Vòng 16</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-quarter-btn" data-bs-toggle="pill" data-bs-target="#tab-quarter" type="button" role="tab">Tứ kết</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-semi-btn" data-bs-toggle="pill" data-bs-target="#tab-semi" type="button" role="tab">Bán kết</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-third-btn" data-bs-toggle="pill" data-bs-target="#tab-third" type="button" role="tab">Hạng 3</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-final-btn" data-bs-toggle="pill" data-bs-target="#tab-final" type="button" role="tab">Chung kết</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="matchesTabContent">
+                <div class="tab-pane fade show active" id="tab-groups" role="tabpanel"><div class="row g-4" id="container-groups"></div></div>
+                <div class="tab-pane fade" id="tab-32" role="tabpanel"><div class="row g-4" id="container-32"></div></div>
+                <div class="tab-pane fade" id="tab-16" role="tabpanel"><div class="row g-4" id="container-16"></div></div>
+                <div class="tab-pane fade" id="tab-quarter" role="tabpanel"><div class="row g-4" id="container-quarter"></div></div>
+                <div class="tab-pane fade" id="tab-semi" role="tabpanel"><div class="row g-4" id="container-semi"></div></div>
+                <div class="tab-pane fade" id="tab-third" role="tabpanel"><div class="row g-4" id="container-third"></div></div>
+                <div class="tab-pane fade" id="tab-final" role="tabpanel"><div class="row g-4" id="container-final"></div></div>
             </div>
         </div>
     </div>
-    
-    <ul class="nav nav-pills justify-content-center mb-4" id="matchTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-groups-btn" data-bs-toggle="pill" data-bs-target="#tab-groups" type="button" role="tab">Vòng Bảng</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-32-btn" data-bs-toggle="pill" data-bs-target="#tab-32" type="button" role="tab">Vòng 32</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-16-btn" data-bs-toggle="pill" data-bs-target="#tab-16" type="button" role="tab">Vòng 16</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-quarter-btn" data-bs-toggle="pill" data-bs-target="#tab-quarter" type="button" role="tab">Tứ kết</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-semi-btn" data-bs-toggle="pill" data-bs-target="#tab-semi" type="button" role="tab">Bán kết</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-third-btn" data-bs-toggle="pill" data-bs-target="#tab-third" type="button" role="tab">Hạng 3</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-final-btn" data-bs-toggle="pill" data-bs-target="#tab-final" type="button" role="tab">Chung kết</button>
-        </li>
-    </ul>
 
-    <div class="tab-content" id="matchesTabContent">
-        <div class="tab-pane fade show active" id="tab-groups" role="tabpanel"><div class="row g-4" id="container-groups"></div></div>
-        <div class="tab-pane fade" id="tab-32" role="tabpanel"><div class="row g-4" id="container-32"></div></div>
-        <div class="tab-pane fade" id="tab-16" role="tabpanel"><div class="row g-4" id="container-16"></div></div>
-        <div class="tab-pane fade" id="tab-quarter" role="tabpanel"><div class="row g-4" id="container-quarter"></div></div>
-        <div class="tab-pane fade" id="tab-semi" role="tabpanel"><div class="row g-4" id="container-semi"></div></div>
-        <div class="tab-pane fade" id="tab-third" role="tabpanel"><div class="row g-4" id="container-third"></div></div>
-        <div class="tab-pane fade" id="tab-final" role="tabpanel"><div class="row g-4" id="container-final"></div></div>
+    <!-- Leaderboard Sidebar -->
+    <div id="leaderboardSidebar" class="sidebar-right open shadow-lg">
+        <div class="sidebar-toggle-tab" onclick="toggleLeaderboard()">
+            BXH
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3 px-3">
+            <h5 class="fw-bold text-warning mb-0">🏆 Leaderboard</h5>
+            <button class="btn-close btn-close-white d-lg-none" onclick="toggleLeaderboard()"></button>
+        </div>
+        <div class="sidebar-scroll">
+            <table class="table table-dark table-hover mb-0 align-middle" style="font-size: 0.85rem;">
+                <thead>
+                    <tr class="text-warning text-uppercase small">
+                        <th class="ps-2">#</th>
+                        <th>Họ tên</th>
+                        <th class="text-center">Dự đoán</th>
+                        <th class="text-end pe-2" style="cursor:pointer" onclick="toggleSortLeaderboard()">💸 Thiệt hại <span id="sortDir">▼</span></th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
 <!-- Prediction Modal -->
 <div class="modal fade" id="predictModal" tabindex="-1">
@@ -164,7 +295,7 @@
                     <button class="btn prediction-btn px-4 py-2" id="btnAway" onclick="selectTeam(this)"></button>
                 </div>
                 
-                <button class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow mt-2" onclick="submitPrediction()">Xác Nhận</button>
+                <button class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow mt-2" id="btnSubmitPredict" onclick="submitPrediction()">Xác Nhận</button>
 
                 <div id="luckyStarContainer" class="form-check text-start mt-3 mb-3" style="width: max-content; margin: 0 auto; display:none">
                     <input class="form-check-input" type="checkbox" id="luckyStar">
@@ -183,43 +314,22 @@
     </div>
 </div>
 
-<!-- Leaderboard Modal -->
-<div class="modal fade" id="leaderboardModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #0f3460;">
-            <div class="modal-header border-bottom border-warning">
-                <h5 class="modal-title fw-bold">🏆 Bảng Xếp Hạng Cao Thủ</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0 align-middle">
-                        <thead class="table-dark">
-                            <tr class="text-warning text-uppercase small">
-                                <th class="ps-3">#</th>
-                                <th>Người Chơi</th>
-                                <th class="text-center">Dự Đoán</th>
-                                <th class="text-end pe-3" style="cursor:pointer" onclick="toggleSortLeaderboard()">💸 Thiệt Hại <span id="sortDir">▼</span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboardBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Change Password Modal -->
-<div class="modal fade" id="changePasswordModal" tabindex="-1">
+<!-- Account Settings Modal -->
+<div class="modal fade" id="accountSettingsModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #0f3460;">
             <div class="modal-header border-bottom border-info">
-                <h5 class="modal-title fw-bold">🔐 Đổi Mật Khẩu</h5>
+                <h5 class="modal-title fw-bold">⚙️ Cài đặt tài khoản</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small text-uppercase">Họ tên hiển thị</label>
+                    <input type="text" id="settingsFullName" class="form-control bg-dark text-white border-secondary">
+                    <button class="btn btn-sm btn-info w-100 fw-bold text-white shadow-sm mt-2" id="btnUpdateProfile" onclick="submitUpdateProfile()">Cập nhật thông tin</button>
+                </div>
+                <hr class="border-secondary my-4">
+                <h6 class="text-info small text-uppercase mb-3">Đổi mật khẩu</h6>
                 <div class="mb-3">
                     <label class="form-label small text-uppercase">Mật khẩu cũ</label>
                     <input type="password" id="oldPassword" class="form-control bg-dark text-white border-secondary">
@@ -232,7 +342,7 @@
                     <label class="form-label small text-uppercase">Xác nhận mật khẩu mới</label>
                     <input type="password" id="confirmNewPassword" class="form-control bg-dark text-white border-secondary">
                 </div>
-                <button class="btn btn-info w-100 fw-bold text-white shadow-sm mt-2" onclick="submitChangePassword()">Cập nhật mật khẩu</button>
+                <button class="btn btn-outline-warning w-100 fw-bold shadow-sm mt-2" id="btnChangePassword" onclick="submitChangePassword()">Đổi mật khẩu</button>
             </div>
         </div>
     </div>
@@ -277,20 +387,33 @@
         setupAjaxAuth();
         checkUser();
         loadMatches();
-        setInterval(() => loadMatches(true), 30000); // refresh every 30s (silent)
+        loadLeaderboard();
+        setInterval(() => {
+            loadMatches(true);
+            if ($('#leaderboardSidebar').hasClass('open')) loadLeaderboard();
+        }, 30000);
+        
+        if (window.innerWidth >= 992) {
+            $('#mainContent').addClass('shifted');
+        }
     });
 
     function formatUserDisplay(fullName, email) {
-        if (!email) return "Unknown";
-        let prefix = email.split('@')[0];
-        if (fullName) return `${fullName} (${prefix})`;
-        return prefix;
+        let name = fullName;
+        if (!name) {
+            name = email ? email.split('@')[0] : "Unknown";
+        }
+        if (name.length > 20) return name.substring(0, 17) + "...";
+        return name;
     }
 
+    let currentUser = null;
     function checkUser() {
         $.get('/api/auth/me', function(user) {
+            currentUser = user;
             if (user.is_admin) $('#adminLink').show();
             $('#userInfo').text(formatUserDisplay(user.full_name, user.email));
+            $('#settingsFullName').val(user.full_name || "");
         }).fail(() => logout());
 
         $.get('/api/admin/active-year', function(data) {
@@ -470,7 +593,21 @@
         }
 
         let isLocked = match.locked || match.status !== 'READY';
-        $('#btnHome, #btnAway, #btnDraw, #luckyStar, .btn-primary').prop('disabled', isLocked);
+        // Admin exception: allow predictions for testing/correction
+        if (currentUser && currentUser.is_admin) {
+            isLocked = false;
+        }
+
+        $('#btnHome, #btnAway, #btnDraw, #luckyStar, #btnSubmitPredict').prop('disabled', isLocked);
+        
+        // Specifically block admin@runsystem.net from voting as requested
+        if (currentUser && currentUser.email === 'admin@runsystem.net') {
+            $('#btnSubmitPredict').hide();
+        } else if (currentUser && currentUser.is_admin) {
+            $('#btnSubmitPredict').show().prop('disabled', false);
+        } else {
+            $('#btnSubmitPredict').show();
+        }
         
         if (match.lucky_star_enabled && match.status === 'READY') {
             $('#luckyStarContainer').show();
@@ -495,6 +632,12 @@
         }
     }
 
+    function setLoadingState(btnId, isLoading) {
+        const btn = $(`#${btnId}`);
+        if (isLoading) btn.addClass('btn-loading');
+        else btn.removeClass('btn-loading');
+    }
+
     function submitPrediction() {
         if (!selectedTeamValue) return showMsg('Vui lòng chọn 1 lựa chọn trước khi lưu!', 'Thông báo');
         
@@ -504,6 +647,7 @@
             use_lucky_star: $('#luckyStar').is(':checked')
         };
         
+        setLoadingState('btnSubmitPredict', true);
         $.ajax({
             url: "/api/predictions", type: "POST",
             contentType: "application/json", data: JSON.stringify(payload),
@@ -515,7 +659,8 @@
             },
             error: function(err) {
                 showMsg(err.responseJSON?.detail || "Không thể lưu dự đoán", 'Lỗi');
-            }
+            },
+            complete: () => setLoadingState('btnSubmitPredict', false)
         });
     }
 
@@ -562,6 +707,20 @@
         renderLeaderboard();
     }
 
+    function toggleLeaderboard() {
+        const sidebar = $('#leaderboardSidebar');
+        const main = $('#mainContent');
+        
+        sidebar.toggleClass('open');
+        if (window.innerWidth >= 992) {
+            main.toggleClass('shifted');
+        }
+        
+        if (sidebar.hasClass('open')) {
+            loadLeaderboard();
+        }
+    }
+
     function renderLeaderboard() {
         let sorted = [...leaderboardData].sort((a, b) => {
             return sortAsc ? (a.money_lost - b.money_lost) : (b.money_lost - a.money_lost);
@@ -571,23 +730,49 @@
         body.empty();
         sorted.forEach((u, index) => {
             let displayName = formatUserDisplay(u.full_name, u.email);
+            let rankClass = "";
+            if (index === 0) rankClass = "text-warning";
+            else if (index === 1) rankClass = "text-light";
+            else if (index === 2) rankClass = "text-danger";
+            
             body.append(`
-                <tr class="${index < 3 ? 'table-active' : ''}">
-                    <td class="ps-3">${index + 1}</td>
+                <tr class="${index < 3 ? 'bg-dark bg-opacity-25' : ''}">
+                    <td class="ps-2 fw-bold ${rankClass}">${index + 1}</td>
                     <td class="fw-bold text-info">${displayName}</td>
                     <td class="text-center">
-                        <span class="text-success fw-bold">${u.total_correct}</span> <small class="opacity-50 mx-1">/</small> 
-                        <span class="text-danger">${u.total_wrong}</span>
+                        <span class="text-success">${u.total_correct}</span><span class="mx-1 opacity-50">/</span><span class="text-danger">${u.total_wrong}</span>
                     </td>
-                    <td class="text-end pe-3 text-warning fw-bold">-${u.money_lost.toLocaleString()}</td>
+                    <td class="text-end pe-2 text-warning fw-bold">-${u.money_lost.toLocaleString()}</td>
                 </tr>
             `);
         });
     }
 
-    function openChangePasswordModal() {
+    function openAccountSettingsModal() {
         $('#oldPassword, #newPassword, #confirmNewPassword').val('');
-        new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+        if (currentUser) $('#settingsFullName').val(currentUser.full_name || "");
+        new bootstrap.Modal(document.getElementById('accountSettingsModal')).show();
+    }
+
+    function submitUpdateProfile() {
+        const newName = $('#settingsFullName').val().trim();
+        if (!newName) return showMsg("Vui lòng nhập họ tên");
+        
+        setLoadingState('btnUpdateProfile', true);
+        $.ajax({
+            url: "/api/auth/update-profile",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ full_name: newName }),
+            success: function(res) {
+                showMsg(res.message, "Thành công");
+                checkUser(); // Refresh UI
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Cập nhật thất bại", "Lỗi");
+            },
+            complete: () => setLoadingState('btnUpdateProfile', false)
+        });
     }
 
     function submitChangePassword() {
@@ -599,6 +784,7 @@
         if (newPass !== confirmPass) return showMsg('Mật khẩu mới không khớp nhau');
         if (newPass.length < 6) return showMsg('Mật khẩu mới phải có ít nhất 6 ký tự');
 
+        setLoadingState('btnChangePassword', true);
         $.ajax({
             url: "/api/auth/change-password",
             type: "POST",
@@ -606,12 +792,13 @@
             data: JSON.stringify({ old_password: oldPass, new_password: newPass }),
             success: function(res) {
                 showMsg(res.message, "Thành công", () => {
-                   bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                   bootstrap.Modal.getInstance(document.getElementById('accountSettingsModal')).hide();
                 });
             },
             error: function(err) {
                 showMsg(err.responseJSON?.detail || "Đổi mật khẩu thất bại", "Lỗi");
-            }
+            },
+            complete: () => setLoadingState('btnChangePassword', false)
         });
     }
 </script>

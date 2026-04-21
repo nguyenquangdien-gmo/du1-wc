@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <style>
         body { background-color: #1a1a2e; color: white; font-family: 'Outfit', sans-serif; }
-        .navbar { background-color: #0f3460; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5); border-bottom: 2px solid #e94560; }
+        .navbar { background-color: #000; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.8); border-bottom: 2px solid #e94560; z-index: 1030; }
         .card { background-color: #16213e; border: 1px solid #0f3460; border-radius: 12px; color: white !important; }
         .table { color: #e0e0e0; border-color: #2a5298; }
         .table thead { background-color: #0f3460; color: #e94560; }
@@ -79,6 +79,29 @@
             text-transform: uppercase;
             font-size: 0.9rem;
         }
+
+        /* Utility for button loading */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+            pointer-events: none;
+        }
+        .btn-loading::after {
+            content: "";
+            position: absolute;
+            width: 1.2rem;
+            height: 1.2rem;
+            top: 50%;
+            left: 50%;
+            margin-top: -0.6rem;
+            margin-left: -0.6rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        /* Modal position fix */
+        .modal-dialog { margin-top: 90px !important; }
     </style>
 </head>
 <body>
@@ -94,8 +117,8 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark mb-4">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/static/dashboard.html">🏠 Trang Cài đặt</a>
-        <a href="/static/dashboard.html" class="btn btn-outline-light btn-sm ms-2">Home</a>
+        <a class="navbar-brand fw-bold" href="/static/dashboard.html">⚙️ Quản trị WC</a>
+        <a href="/static/dashboard.html" class="btn btn-primary btn-sm ms-3 shadow-sm px-3 fw-bold">🏠 Về Dashboard</a>
         <div class="d-flex align-items-center">
             <span id="userInfo" class="me-3 text-info small"></span>
             <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
@@ -128,7 +151,7 @@
             </div>
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" onclick="saveStadium()">Lưu</button>
+                <button type="button" class="btn btn-primary" id="btnSaveStadium" onclick="saveStadium()">Lưu</button>
             </div>
         </div>
     </div>
@@ -320,7 +343,7 @@
                                 </div>
                             </div>
                             <div class="col-12 mt-4">
-                                <button type="button" class="btn btn-primary px-5" onclick="saveSettings()">Lưu cấu hình</button>
+                                <button type="button" class="btn btn-primary px-5" id="btnSaveSettings" onclick="saveSettings()">Lưu cấu hình</button>
                             </div>
                         </div>
                     </form>
@@ -444,7 +467,7 @@
             </div>
             <div class="modal-footer border-top border-secondary">
                 <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="button" class="btn btn-primary btn-sm px-4" onclick="saveMatch()">Lưu Thay Đổi</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="btnSaveMatch" onclick="saveMatch()">Lưu Thay Đổi</button>
             </div>
         </div>
     </div>
@@ -708,6 +731,7 @@
             odds_analysis_text: $('#editAnalysis').val()
         };
 
+        setLoadingState('btnSaveMatch', true);
         $.ajax({
             url: `/api/admin/matches/${mid}`,
             type: 'PUT',
@@ -721,7 +745,8 @@
             },
             error: function(err) {
                 showMsg(err.responseJSON?.detail || "Update failed", 'Lỗi');
-            }
+            },
+            complete: () => setLoadingState('btnSaveMatch', false)
         });
     }
 
@@ -880,6 +905,7 @@
             type = 'PUT';
         }
         
+        setLoadingState('btnSaveStadium', true);
         $.ajax({
             url: url,
             type: type,
@@ -889,7 +915,8 @@
                 stadiumModal.hide();
                 loadStadiumsAdmin();
                 showMsg(id ? "Cập nhật thành công!" : "Thêm sân thành công!");
-            }
+            },
+            complete: () => setLoadingState('btnSaveStadium', false)
         });
     }
 
@@ -934,19 +961,21 @@
             batch_live_enabled: $('#setLiveEnabled').is(':checked'),
             batch_live_start_time: $('#setLiveStartTime').val()
         };
+        setLoadingState('btnSaveSettings', true);
         $.ajax({
             url: '/api/admin/settings',
             type: 'PATCH',
             contentType: 'application/json',
             data: JSON.stringify(payload),
-            success: () => showMsg("Cập nhật cấu hình thành công")
+            success: () => showMsg("Cập nhật cấu hình thành công"),
+            complete: () => setLoadingState('btnSaveSettings', false)
         });
     }
 
     function runBatch(type, btnEl) {
         let btn = $(btnEl);
         let originalText = btn.text();
-        btn.prop('disabled', true).text('⌛...');
+        setLoadingState(btn.attr('id'), true);
         
         $.ajax({
             url: `/api/admin/batch/${type}/run`,
@@ -960,7 +989,7 @@
                 showMsg(err.responseJSON?.detail || "Lỗi khi chạy batch", 'Lỗi');
             },
             complete: function() {
-                btn.prop('disabled', false).text(originalText);
+                setLoadingState(btn.attr('id'), false);
             }
         });
     }
