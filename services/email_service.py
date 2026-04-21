@@ -1,6 +1,7 @@
 import os
 import threading
 import urllib.request
+import urllib.error
 import json
 from datetime import datetime
 
@@ -8,7 +9,9 @@ def send_otp_email_async(receiver_email: str, otp: str):
     def send_email():
         # Lấy file cấu hình từ biến môi trường
         sender_email = os.environ.get("MAIL_USERNAME", "gmo_hcm@runsystem.vn")
-        api_key = os.environ.get("MAIL_PASSWORD", "")
+        # Thử lấy từ BREVO_API_KEY trước, sau đó là MAIL_PASSWORD
+        api_key = os.environ.get("BREVO_API_KEY") or os.environ.get("MAIL_PASSWORD", "")
+        api_key = api_key.strip()
         
         if not api_key or sender_email == "your_email@gmail.com":
             # Fallback to console debug if email is not configured
@@ -58,8 +61,11 @@ def send_otp_email_async(receiver_email: str, otp: str):
             with urllib.request.urlopen(req) as response:
                 result = response.read().decode('utf-8')
                 print(f"INFO: Hệ thống đã gọi API gửi email qua Brevo thành công tới {receiver_email}. Phản hồi: {result}")
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8')
+            print(f"ERROR: Lỗi gửi email qua Brevo API (HTTP {e.code}): {error_body}")
         except Exception as e:
-            print(f"ERROR: Lỗi gửi email qua Brevo API: {e}")
+            print(f"ERROR: Lỗi hệ thống khi gửi email: {e}")
             
     # Chạy việc gửi email trong luồng riêng biệt để tránh làm chặn API response
     threading.Thread(target=send_email).start()

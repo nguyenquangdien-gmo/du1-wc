@@ -3,12 +3,12 @@ from typing import Optional
 from datetime import datetime
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     full_name: str
     password: str
 
 class OTPVerify(BaseModel):
-    email: EmailStr
+    email: str
     code: str
 
 class Token(BaseModel):

@@ -19,6 +19,21 @@ import os
 # Create DB tables
 Base.metadata.create_all(bind=engine)
 
+def mask_value(val: str) -> str:
+    if not val: return "[Mất/Trống]"
+    if len(val) <= 8: return "****"
+    return f"{val[:4]}...{val[-4:]}"
+
+def log_env_status():
+    keys = ["APP_URL", "MAIL_USERNAME", "MAIL_PASSWORD", "BREVO_API_KEY", "GEMINI_API_KEY", "SECRET_KEY"]
+    print("--- KIỂM TRA BIẾN MÔI TRƯỜNG ---")
+    for key in keys:
+        val = os.environ.get(key)
+        print(f"{key}: {mask_value(val)}")
+    print("-------------------------------")
+
+log_env_status()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Application starting... Initializing scheduler.")
