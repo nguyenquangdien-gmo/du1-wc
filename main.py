@@ -1,5 +1,14 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from Render secrets path if it exists, otherwise from .env
+render_secrets_path = "/etc/secrets/.env"
+if os.path.exists(render_secrets_path):
+    load_dotenv(render_secrets_path)
+else:
+    load_dotenv()
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from database import engine, Base

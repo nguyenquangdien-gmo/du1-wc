@@ -1,4 +1,13 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from Render secrets path if it exists, otherwise from .env
+render_secrets_path = "/etc/secrets/.env"
+if os.path.exists(render_secrets_path):
+    load_dotenv(render_secrets_path)
+else:
+    load_dotenv()
+
 import json
 from datetime import datetime
 from database import engine, SessionLocal, Base, models
