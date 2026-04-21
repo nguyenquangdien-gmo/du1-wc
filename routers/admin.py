@@ -29,6 +29,24 @@ def update_user_admin(user_id: int, data: schemas.UserAdminUpdate, db: Session =
     db.commit()
     return {"message": "User updated"}
 
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
+    if user_id == current_admin.id:
+        raise HTTPException(status_code=400, detail="Bạn không thể tự xóa chính mình.")
+        
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy người dùng.")
+    
+    # Xóa dữ liệu liên quan
+    db.query(models.Prediction).filter(models.Prediction.user_id == user_id).delete()
+    db.query(models.UserStats).filter(models.UserStats.user_id == user_id).delete()
+    db.query(models.OTP).filter(models.OTP.email == user.email).delete()
+    
+    db.delete(user)
+    db.commit()
+    return {"message": "Đã xóa người dùng thành công."}
+
 # --- COUNTRY MANAGEMENT ---
 @router.get("/countries", response_model=List[schemas.CountryResponse])
 def get_all_countries_admin(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
