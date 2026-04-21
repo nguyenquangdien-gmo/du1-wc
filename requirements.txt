@@ -10,7 +10,7 @@ apscheduler
 pytz
 python-dotenv
 beautifulsoup4
-bcrypt==3.2.0
+bcrypt
 pymysql
 cryptography
 alembic

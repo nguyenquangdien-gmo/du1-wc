@@ -4,10 +4,12 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 from sqlalchemy.engine import make_url
 
-# Yêu cầu bắt buộc cung cấp DATABASE_URL (MySQL)
+# Kiểm tra biến môi trường
 raw_url = os.environ.get("DATABASE_URL")
 if not raw_url:
-    raise ValueError("LỖI: Biến môi trường DATABASE_URL không được thiết lập. Hệ thống yêu cầu MySQL để vận hành.")
+    print("CANH BAO: Bien moi truong DATABASE_URL chua duoc thiet lap. Uvircorn se tiep tuc nap nhung app se loi khi connect.")
+    # Su dung placeholder de tranh crash khi import
+    raw_url = "mysql+pymysql://missing_url:placeholder@localhost/missing"
 
 # Đảm bảo sử dụng driver pymysql cho MySQL
 if raw_url.startswith("mysql://"):
