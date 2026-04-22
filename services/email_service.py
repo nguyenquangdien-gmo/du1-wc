@@ -108,3 +108,52 @@ def send_password_reset_email_async(receiver_email: str, new_password: str):
             print(f"ERROR: Lỗi gửi email reset password: {e}")
             
     threading.Thread(target=send_email).start()
+
+def send_forgot_password_otp_async(receiver_email: str, otp_code: str):
+    def send_email():
+        sender_email = os.environ.get("MAIL_USERNAME", "gmo_hcm@runsystem.vn")
+        api_key = os.environ.get("BREVO_API_KEY") or os.environ.get("MAIL_PASSWORD", "")
+        api_key = api_key.strip()
+        
+        if not api_key or sender_email == "your_email@gmail.com":
+            print(f"DEBUG (No Mail Config): Quên mật khẩu cho {receiver_email}. OTP: {otp_code}")
+            return
+            
+        url = "https://api.brevo.com/v3/smtp/email"
+        current_year = datetime.now().year
+        payload = {
+            "sender": {"name": f"Hệ thống DU1-WC{current_year}", "email": sender_email},
+            "to": [{"email": receiver_email}],
+            "subject": f'Mã xác nhận khôi phục mật khẩu DU1-WC{current_year}',
+            "htmlContent": f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #e94560;">Yêu cầu khôi phục mật khẩu</h2>
+                    <p>Chào bạn,</p>
+                    <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản <strong>{receiver_email}</strong>.</p>
+                    <p>Mã xác nhận (OTP) của bạn là:</p>
+                    <p style="text-align: center; margin: 30px 0;">
+                        <span style="font-size: 2em; font-weight: bold; color: #e94560; background: #fdf2f4; padding: 10px 20px; border: 1px solid #e94560; border-radius: 5px; letter-spacing: 5px;">{otp_code}</span>
+                    </p>
+                    <p>Mã này có hiệu lực trong vòng <strong>30 phút</strong>. Nếu bạn không yêu cầu khôi phục mật khẩu, vui lòng bỏ qua email này.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 0.8em; color: #888;">Đây là email tự động, vui lòng không trả lời.</p>
+                </body>
+            </html>
+            """
+        }
+        
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={
+            'api-key': api_key,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }, method='POST')
+
+        try:
+            with urllib.request.urlopen(req) as response:
+                print(f"INFO: Đã gửi email OTP quên mật khẩu tới {receiver_email}")
+        except Exception as e:
+            print(f"ERROR: Lỗi gửi email OTP quên mật khẩu: {e}")
+            
+    threading.Thread(target=send_email).start()

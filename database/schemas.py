@@ -192,3 +192,11 @@ class CommentResponse(BaseModel):
 
 class ReactionToggle(BaseModel):
     reaction_type: str # 👍, ❤️, 😂, 😮, 😢
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str

@@ -55,8 +55,9 @@
                 <div id="err_loginPassword" class="error-msg"></div>
             </div>
             <button class="btn btn-primary w-100" onclick="login()">Đăng nhập</button>
-            <div class="text-center mt-3">
+            <div class="text-center mt-3 d-flex flex-column gap-2">
                 <a href="#" onclick="showSection('registerForm')" class="text-light text-decoration-none small opacity-75 hover-opacity-100">Chưa có tài khoản? Đăng ký ngay</a>
+                <a href="#" onclick="showForgotPassword()" class="text-info text-decoration-none small opacity-75 hover-opacity-100 fw-bold">Quên mật khẩu?</a>
             </div>
         </div>
     </div>
@@ -91,6 +92,46 @@
         <a href="/static/help.html" class="text-info text-decoration-none small fw-bold">
             <i class="fas fa-question-circle"></i> Trợ giúp & Quy định của DU1
         </a>
+    </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #e94560;">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold">🔑 KHÔI PHỤC MẬT KHẨU</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Step 1: Input Email -->
+                <div id="resetStep1">
+                    <p class="small text-white-50 mb-4">Nhập email @runsystem.net của bạn để nhận mã xác nhận (OTP).</p>
+                    <div class="mb-3">
+                        <label class="form-label small text-uppercase fw-bold">Email của bạn</label>
+                        <input type="email" id="resetEmail" class="form-control" placeholder="username hoặc email">
+                    </div>
+                    <button class="btn btn-primary w-100 fw-bold" id="btnSendOTP" onclick="sendResetOTP()">Gửi mã OTP</button>
+                </div>
+
+                <!-- Step 2: Input OTP & New Pass -->
+                <div id="resetStep2" class="d-none">
+                    <p class="small text-success mb-4">Mã OTP đã được gửi! Vui lòng kiểm tra email của bạn.</p>
+                    <div class="mb-3">
+                        <label class="form-label small text-uppercase fw-bold">Mã OTP (6 chữ số)</label>
+                        <input type="text" id="resetOTP" class="form-control text-center fs-4 letter-spacing-5" placeholder="000000" maxlength="6">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small text-uppercase fw-bold">Mật khẩu mới</label>
+                        <input type="password" id="resetNewPassword" class="form-control" placeholder="Tối thiểu 6 ký tự">
+                    </div>
+                    <button class="btn btn-primary w-100 fw-bold" id="btnConfirmReset" onclick="submitResetPassword()">Đặt lại mật khẩu</button>
+                    <div class="text-center mt-3">
+                        <a href="#" onclick="showResetStep(1)" class="text-light text-decoration-none small opacity-50">Quay lại nhập email</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -218,6 +259,77 @@
                 let msg = err.responseJSON?.detail || "Lỗi";
                 if(msg.includes("Inactive")) showMsg("Tài khoản chưa kích hoạt. Hãy check email.", "Chưa kích hoạt");
                 else showMsg("Email hoặc mật khẩu sai", "Lỗi đăng nhập");
+            }
+        });
+    }
+
+    // Forgot Password Logic
+    function showForgotPassword() {
+        showResetStep(1);
+        $('#resetEmail').val($('#loginEmail').val());
+        new bootstrap.Modal($('#forgotPasswordModal')).show();
+    }
+
+    function showResetStep(step) {
+        if (step === 1) {
+            $('#resetStep1').removeClass('d-none');
+            $('#resetStep2').addClass('d-none');
+        } else {
+            $('#resetStep1').addClass('d-none');
+            $('#resetStep2').removeClass('d-none');
+        }
+    }
+
+    function sendResetOTP() {
+        let email = $('#resetEmail').val();
+        if (!email) return showMsg("Vui lòng nhập email", "Lỗi");
+
+        $('#btnSendOTP').prop('disabled', true).text('Đang gửi...');
+        $.ajax({
+            url: "/api/auth/forgot-password",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ email: email }),
+            success: function(res) {
+                showResetStep(2);
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Không thể gửi OTP", "Lỗi");
+            },
+            complete: function() {
+                $('#btnSendOTP').prop('disabled', false).text('Gửi mã OTP');
+            }
+        });
+    }
+
+    function submitResetPassword() {
+        let email = $('#resetEmail').val();
+        let otp = $('#resetOTP').val();
+        let newPass = $('#resetNewPassword').val();
+
+        if (otp.length !== 6) return showMsg("Mã OTP phải có 6 chữ số", "Lỗi");
+        if (newPass.length < 6) return showMsg("Mật khẩu mới phải có ít nhất 6 ký tự", "Lỗi");
+
+        $('#btnConfirmReset').prop('disabled', true).text('Đang xử lý...');
+        $.ajax({
+            url: "/api/auth/reset-password",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                email: email,
+                code: otp,
+                new_password: newPass
+            }),
+            success: function(res) {
+                showMsg(res.message, "Thành công", () => {
+                    bootstrap.Modal.getInstance($('#forgotPasswordModal')).hide();
+                });
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Không thể đặt lại mật khẩu", "Lỗi");
+            },
+            complete: function() {
+                $('#btnConfirmReset').prop('disabled', false).text('Đặt lại mật khẩu');
             }
         });
     }

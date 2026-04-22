@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from database import get_db, models, schemas
 from services.auth import get_password_hash, verify_password, create_access_token, generate_otp, ACCESS_TOKEN_EXPIRE_MINUTES
-from services.email_service import send_otp_email_async
+from services.email_service import send_otp_email_async, send_forgot_password_otp_async
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -170,3 +170,55 @@ def update_profile(data: schemas.ProfileUpdate, db: Session = Depends(get_db), c
     current_user.full_name = data.full_name
     db.commit()
     return {"message": "Cập nhật thông tin thành công!"}
+
+@router.post("/forgot-password")
+def forgot_password(data: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email = data.email.strip()
+    if "@" not in email:
+        email += "@runsystem.net"
+        
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        # Don't reveal if user exists for security, but here for DU1 context it's okay to be simple
+        raise HTTPException(status_code=404, detail="Email không tồn tại trong hệ thống")
+    
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Tài khoản chưa được kích hoạt")
+
+    # Generate OTP
+    otp_code = generate_otp()
+    expires = datetime.utcnow() + timedelta(minutes=30)
+    
+    # Clean old OTPs for this email
+    db.query(models.OTP).filter(models.OTP.email == email).delete()
+    
+    db_otp = models.OTP(email=email, code=otp_code, expires_at=expires)
+    db.add(db_otp)
+    db.commit()
+    
+    send_forgot_password_otp_async(email, otp_code)
+    return {"message": "Mã xác nhận đã được gửi tới email của bạn."}
+
+@router.post("/reset-password")
+def reset_password(data: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    email = data.email.strip()
+    if "@" not in email:
+        email += "@runsystem.net"
+        
+    otp_record = db.query(models.OTP).filter(
+        models.OTP.email == email, 
+        models.OTP.code == data.code
+    ).first()
+    
+    if not otp_record or otp_record.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Mã xác nhận không chính xác hoặc đã hết hạn")
+    
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Người dùng không tồn tại")
+        
+    user.password_hash = get_password_hash(data.new_password)
+    db.delete(otp_record)
+    db.commit()
+    
+    return {"message": "Mật khẩu đã được cập nhật thành công. Vui lòng đăng nhập lại."}
