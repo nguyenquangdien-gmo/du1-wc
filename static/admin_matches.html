@@ -11,13 +11,22 @@
         .navbar { background-color: #000; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.8); border-bottom: 2px solid #e94560; z-index: 1050; }
         .card { background-color: #16213e; border: 1px solid #0f3460; border-radius: 12px; color: white !important; }
         .table { color: #e0e0e0; border-color: #2a5298; }
-        .table thead th { 
+        /* Sticky header for main matches list - avoid overlapping navbar */
+        .table-main-sticky thead th { 
             position: sticky; 
             top: 72px; 
             background-color: #0f3460 !important; 
             z-index: 1040; 
             border-bottom: 2px solid #2a5298 !important;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        /* Sticky header for small tables inside containers */
+        .table-scrollable thead th {
+            position: sticky;
+            top: 0;
+            background-color: #16213e !important;
+            z-index: 10;
+            border-bottom: 1px solid #2d2d44 !important;
         }
         .table-responsive { overflow: visible !important; }
         .badge-ready { background-color: #0d6efd; }
@@ -188,6 +197,9 @@
             <button class="nav-link text-white" id="settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings">Cấu hình chung</button>
         </li>
         <li class="nav-item">
+            <button class="nav-link text-white" id="tournament-tab" data-bs-toggle="tab" data-bs-target="#tab-tournament">Dự đoán giải</button>
+        </li>
+        <li class="nav-item">
             <button class="nav-link text-white" id="chatops-tab" data-bs-toggle="tab" data-bs-target="#tab-chatops">Thông báo ChatOps</button>
         </li>
     </ul>
@@ -205,7 +217,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-dark mb-0 align-middle">
+                        <table class="table table-hover table-dark mb-0 align-middle table-main-sticky">
                             <thead>
                                 <tr class="text-uppercase small">
                                     <th class="ps-3">#</th>
@@ -288,6 +300,85 @@
                             </thead>
                             <tbody id="stadiumList"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tournament Tab -->
+        <div class="tab-pane fade" id="tab-tournament" role="tabpanel">
+            <div class="card shadow-lg border-0">
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6 border-end border-secondary">
+                            <h6 class="text-warning fw-bold text-uppercase mb-3">🥇 Đội Vô Địch</h6>
+                            <div class="mb-3">
+                                <label class="form-label text-warning fw-bold small">Phí dự đoán (DU1)</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary currency-input" id="setTourChampFee">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small">Trạng thái</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="adminChampionLocked">
+                                    <label class="form-check-label text-white" for="adminChampionLocked">Khóa dự đoán</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small">Kết quả thực tế</label>
+                                <input type="text" id="adminChampionResult" class="form-control bg-dark text-white border-secondary" placeholder="Nhập tên hoặc mã đội vô địch...">
+                            </div>
+                            <button class="btn btn-primary btn-sm w-100" onclick="saveTournamentFullConfig()">Lưu cấu hình & Phí</button>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="text-info fw-bold text-uppercase mb-3">👟 Cầu thủ xuất sắc</h6>
+                            <div class="mb-3">
+                                <label class="form-label text-warning fw-bold small">Phí dự đoán (DU1)</label>
+                                <input type="text" class="form-control bg-dark text-white border-secondary currency-input" id="setTourPlayerFee">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small">Trạng thái</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="adminPlayerLocked">
+                                    <label class="form-check-label text-white" for="adminPlayerLocked">Khóa dự đoán</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-secondary small">Kết quả thực tế</label>
+                                <input type="text" id="adminPlayerResult" class="form-control bg-dark text-white border-secondary" placeholder="Nhập tên cầu thủ...">
+                            </div>
+                            <button class="btn btn-primary btn-sm w-100" onclick="saveTournamentFullConfig()">Lưu cấu hình & Phí</button>
+                        </div>
+
+                        <div class="col-12 mt-4 pt-4 border-top border-secondary">
+                            <h6 class="text-info fw-bold text-uppercase mb-3">📋 Danh sách gợi ý cầu thủ (Cầu thủ xuất sắc)</h6>
+                            <div class="input-group mb-3">
+                                <input type="text" id="adminNewPlayerName" class="form-control bg-dark text-white border-secondary" placeholder="Nhập tên cầu thủ để thêm vào gợi ý...">
+                                <button class="btn btn-info fw-bold" onclick="addPlayerCandidate()">Thêm vào danh sách</button>
+                            </div>
+                            <div style="max-height: 200px; overflow-y: auto; overflow-x: hidden; border: 1px solid #2d2d44; border-radius: 4px;">
+                                <table class="table table-dark table-hover table-sm align-middle mb-0 table-scrollable">
+                                    <thead>
+                                        <tr class="text-secondary small text-uppercase">
+                                            <th class="ps-3">Tên cầu thủ</th>
+                                            <th class="text-end pe-3">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminPlayerCandidatesBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mt-4 pt-4 border-top border-secondary text-center">
+                            <div id="finalizeStatus" class="mb-3 text-info fw-bold small"></div>
+                            <div class="alert alert-danger d-inline-block small py-2 px-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i> 
+                                <strong>CẢNH BÁO:</strong> Quyết toán sẽ chia quỹ thưởng và cập nhật tài chính cho người dùng. Thao tác này không thể hoàn tác!
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-danger px-5 fw-bold" id="btnFinalizeTournament" onclick="finalizeTournamentControl()">QUYẾT TOÁN GIẢI ĐẤU</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -500,7 +591,7 @@
 
                         <div class="col-12 mt-4 d-flex justify-content-between align-items-center border-bottom border-secondary pb-2">
                             <h6 class="mb-0 text-info fw-bold">Kèo & AI Phân Tích</h6>
-                            <button type="button" class="btn btn-sm btn-warning fw-bold" onclick="generateAI()">✨ AI Phân tích</button>
+                            <button type="button" class="btn btn-sm btn-warning fw-bold" id="btnGenerateAI" onclick="generateAI()">✨ AI Phân tích</button>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small text-uppercase fw-bold">Đội Cửa Trên</label>
@@ -549,7 +640,8 @@
     }, true);
 
     let countries = [];
-    let stadiums = [];
+    var stadiums = [];
+    var playerCandidates = [];
     let stadiumModal;
 
     // --- HELPER FUNCTIONS ---
@@ -675,6 +767,10 @@
             else if (target === '#tab-countries') loadCountriesAdmin();
             else if (target === '#tab-stadiums') loadStadiumsAdmin();
             else if (target === '#tab-settings' || target === '#tab-chatops') loadSettings();
+            else if (target === '#tab-tournament') {
+                loadSettings();
+                loadTournamentAdminData();
+            }
         });
 
         loadMatches(); 
@@ -740,18 +836,19 @@
             response(filtered);
         };
 
-        $("#editHome").autocomplete({
+        $("#editHome, #editAway, #adminChampionResult").autocomplete({
             source: countrySource,
-            select: (e, ui) => $('#editHomeCode').val(ui.item.code)
-        });
-        $("#editAway").autocomplete({
-            source: countrySource,
-            select: (e, ui) => $('#editAwayCode').val(ui.item.code)
+            select: (e, ui) => {
+                const target = $(e.target).attr('id');
+                if (target === 'editHome') $('#editHomeCode').val(ui.item.code);
+                else if (target === 'editAway') $('#editAwayCode').val(ui.item.code);
+            }
         });
 
         let teamNames = countries.map(c => c.value);
         $("#editFav, #editUnderdog").autocomplete({ source: teamNames });
         $("#editStadium").autocomplete({ source: stadiums });
+        $("#adminPlayerResult").autocomplete({ source: playerCandidates });
     }
 
     // --- MATCH ACTIONS ---
@@ -825,7 +922,7 @@
 
     function generateAI() {
         let mid = $('#editMid').val();
-        let btn = $('.btn-warning');
+        let btn = $('#btnGenerateAI');
         let origText = btn.text();
         btn.prop('disabled', true).text('Đang phân tích...');
         
@@ -966,6 +1063,10 @@
         $.get('/api/admin/settings', function(d) {
             $('#setPenalty').val(formatVND(d.penalty_per_loss || 0));
             $('#setLuckyAmount').val(formatVND(d.lucky_star_amount || 0));
+            $('#setTourChampFee').val(formatVND(d.tournament_champion_fee || 20000));
+            $('#setTourPlayerFee').val(formatVND(d.tournament_player_fee || 20000));
+            // Update fee info text
+            $('#tournamentFeeInfo').html(`Đội vô địch <strong>${formatVND(d.tournament_champion_fee || 0)} DU1</strong>, Cầu thủ xuất sắc <strong>${formatVND(d.tournament_player_fee || 0)} DU1</strong>`);
             $('#setLiveInterval').val(d.batch_live_interval || 5);
             $('#setLiveEnabled').prop('checked', d.batch_live_enabled === 'true');
             $('#setChatOpsEnabled').prop('checked', d.mattermost_enabled === 'true');
@@ -981,6 +1082,8 @@
         let p = {
             penalty_per_loss: parseVND($('#setPenalty').val()),
             lucky_star_amount: parseVND($('#setLuckyAmount').val()),
+            tournament_champion_fee: parseVND($('#setTourChampFee').val()),
+            tournament_player_fee: parseVND($('#setTourPlayerFee').val()),
             batch_live_interval: parseInt($('#setLiveInterval').val()),
             batch_live_enabled: $('#setLiveEnabled').is(':checked'),
             mattermost_enabled: $('#setChatOpsEnabled').is(':checked'),
@@ -1037,6 +1140,134 @@
             });
         });
     }
+
+    // --- TOURNAMENT ADMIN ---
+    async function loadTournamentAdminData() {
+        try {
+            const res = await fetch('/api/tournament/summary', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const d = await res.json();
+            
+            $('#adminChampionLocked').prop('checked', d.champion_locked);
+            $('#adminPlayerLocked').prop('checked', d.player_locked);
+            $('#adminChampionResult').val(d.champion_result || "");
+            $('#adminPlayerResult').val(d.player_result || "");
+            
+            $('#finalizeStatus').text(d.is_finalized ? "TRẠNG THÁI: Đã quyết toán xong." : "TRẠNG THÁI: Đang chờ quyết toán.");
+            if (d.is_finalized) {
+                $('#btnFinalizeTournament').prop('disabled', true).text('ĐÃ QUYẾT TOÁN');
+            }
+
+            // Load player candidates
+            const pRes = await fetch('/api/tournament/player-candidates');
+            const candidates = await pRes.json();
+            playerCandidates = candidates.map(p => p.name);
+            renderPlayerCandidates(candidates);
+            setupAutocompletes();
+
+        } catch (e) { console.error(e); }
+    }
+
+    function renderPlayerCandidates(list) {
+        const body = $('#adminPlayerCandidatesBody');
+        body.empty();
+        list.forEach(p => {
+            body.append(`
+                <tr>
+                    <td class="ps-3">${p.name}</td>
+                    <td class="text-end pe-3">
+                        <button class="btn btn-sm btn-outline-danger" onclick="deletePlayerCandidate(${p.id})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    async function addPlayerCandidate() {
+        const name = $('#adminNewPlayerName').val().trim();
+        if (!name) return;
+
+        const activeYear = await fetch('/api/admin/active-year').then(r => r.json());
+        
+        $.ajax({
+            url: '/api/tournament/admin/player-candidates',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: { 'Authorization': 'Bearer ' + token },
+            data: JSON.stringify({ name: name, year: activeYear.year }),
+            success: () => {
+                $('#adminNewPlayerName').val('');
+                loadTournamentAdminData();
+            }
+        });
+    }
+
+    function deletePlayerCandidate(pid) {
+        showConfirm("Xóa cầu thủ khỏi danh sách gợi ý?", "Xác nhận", () => {
+            $.ajax({
+                url: `/api/tournament/admin/player-candidates/${pid}`,
+                type: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: () => loadTournamentAdminData()
+            });
+        });
+    }
+
+    function saveTournamentAdminSettings() {
+        const body = {
+            champion_locked: $('#adminChampionLocked').is(':checked'),
+            player_locked: $('#adminPlayerLocked').is(':checked'),
+            champion_result: $('#adminChampionResult').val().trim() || null,
+            player_result: $('#adminPlayerResult').val().trim() || null
+        };
+        $.ajax({
+            url: '/api/tournament/admin/settings',
+            type: 'POST',
+            contentType: 'application/json',
+            headers: { 'Authorization': 'Bearer ' + token },
+            data: JSON.stringify(body),
+            success: () => {
+                // Success message silenced if called from saveTournamentFullConfig
+            },
+            error: (err) => showMsg(err.responseJSON?.detail || "Lỗi", "Thất bại")
+        });
+    }
+
+    function saveTournamentFullConfig() {
+        // 1. Save Category Locks & Results
+        saveTournamentAdminSettings();
+        // 2. Save Fees (and other settings)
+        // Note: saveSettings() already has its own success message
+        saveSettings();
+    }
+
+    function finalizeTournamentControl() {
+        if (!$('#adminChampionResult').val() || !$('#adminPlayerResult').val()) {
+            return showMsg("Vui lòng nhập kết quả thực tế trước khi quyết toán", "Nhắc nhở");
+        }
+        showConfirm("Bạn có chắc chắn muốn quyết toán toàn bộ giải đấu? Tiền thưởng sẽ được chia ngay lập tức!", "XÁC NHẬN NGUY HIỂM", () => {
+            setLoadingState('btnFinalizeTournament', true);
+            $.ajax({
+                url: '/api/tournament/admin/finalize',
+                type: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                success: (res) => {
+                    showMsg(res.message, "Thành công");
+                    loadTournamentAdminData();
+                },
+                error: (err) => showMsg(err.responseJSON?.detail || "Lỗi quyết toán", "Thất bại"),
+                complete: () => setLoadingState('btnFinalizeTournament', false)
+            });
+        });
+    }
+
+    // Tab handle
+    $(document).on('shown.bs.tab', 'button[data-bs-target="#tab-tournament"]', function (e) {
+        loadTournamentAdminData();
+    });
 </script>
 </body>
 </html>

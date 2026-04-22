@@ -24,6 +24,7 @@ class UserStats(Base):
     total_correct = Column(Integer, default=0)
     total_wrong = Column(Integer, default=0)
     money_lost = Column(Integer, default=0)
+    tournament_money_lost = Column(Integer, default=0)
     
     __table_args__ = (UniqueConstraint('user_id', 'year', name='uq_user_year_stats'),)
     
@@ -131,3 +132,32 @@ class CommentReaction(Base):
     
     comment = relationship("Comment", back_populates="reactions")
     user = relationship("User")
+
+class TournamentVote(Base):
+    __tablename__ = "tournament_votes"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    year = Column(Integer, index=True)
+    category = Column(String(50), index=True) # CHAMPION, BEST_PLAYER
+    selection = Column(String(255))
+    fee_paid = Column(Integer, default=20000)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    __table_args__ = (UniqueConstraint('user_id', 'year', 'category', name='uq_user_year_cat_vote'),)
+
+class TournamentResult(Base):
+    __tablename__ = "tournament_results"
+    year = Column(Integer, primary_key=True, index=True)
+    champion_result = Column(String(255), nullable=True)
+    player_result = Column(String(255), nullable=True)
+    champion_locked = Column(Boolean, default=False)
+    player_locked = Column(Boolean, default=False)
+    is_finalized = Column(Boolean, default=False)
+
+class TournamentPlayerCandidate(Base):
+    __tablename__ = "tournament_player_candidates"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), index=True)
+    country_code = Column(String(10), nullable=True)
+    year = Column(Integer, index=True)

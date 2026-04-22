@@ -14,7 +14,7 @@ else:
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from database import engine, Base
-from routers import auth, matches, admin
+from routers import auth, matches, admin, tournament
 from services.scheduler import start_scheduler
 import os
 
@@ -70,6 +70,7 @@ app = FastAPI(title="World Cup 2026", lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(matches.router)
 app.include_router(admin.router)
+app.include_router(tournament.router)
 
 # Ensure static folder exists
 os.makedirs("static", exist_ok=True)

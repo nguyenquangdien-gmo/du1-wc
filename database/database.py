@@ -22,10 +22,13 @@ elif raw_url.startswith("mysql") and "+pymysql" not in raw_url:
 # Phân tích URL để loại bỏ các tham số không tương thích (như ssl-mode)
 url = make_url(raw_url)
 
-# Render/Aiven thường thêm ?ssl-mode=REQUIRED, pymysql không nhận cái này
+# Render/Aiven/JDBC thường thêm các tham số không tương thích, pymysql không nhận
 query = dict(url.query)
 query.pop("ssl-mode", None)
 query.pop("ssl_ca", None)
+query.pop("useUnicode", None)
+query.pop("characterEncoding", None)
+query["charset"] = "utf8mb4"
 
 # Tạo lại URL sạch
 new_url = url._replace(query=query)

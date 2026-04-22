@@ -113,6 +113,8 @@ class StadiumUpdate(BaseModel):
 class SettingUpdate(BaseModel):
     penalty_per_loss: Optional[int] = None
     lucky_star_amount: Optional[int] = None
+    tournament_champion_fee: Optional[int] = None
+    tournament_player_fee: Optional[int] = None
     
     batch_predict_interval: Optional[int] = None
     batch_predict_enabled: Optional[bool] = None
@@ -200,3 +202,50 @@ class ResetPasswordRequest(BaseModel):
     email: str
     code: str
     new_password: str
+
+class TournamentVoteCreate(BaseModel):
+    category: str # CHAMPION, BEST_PLAYER
+    selection: str
+
+class TournamentVoteResponse(BaseModel):
+    id: int
+    user_id: int
+    user_full_name: Optional[str]
+    category: str
+    selection: str
+    fee_paid: int
+    
+    class Config:
+        from_attributes = True
+
+class TournamentStatus(BaseModel):
+    year: int
+    champion_locked: bool
+    player_locked: bool
+    is_finalized: bool
+    champion_pool: int
+    player_pool: int
+    champion_fee: int
+    player_fee: int
+    user_votes: List[TournamentVoteResponse]
+    all_votes: List[TournamentVoteResponse]
+
+class TournamentResultUpdate(BaseModel):
+    champion_result: Optional[str] = None
+    player_result: Optional[str] = None
+    champion_locked: Optional[bool] = None
+    player_locked: Optional[bool] = None
+
+class TournamentPlayerCandidateCreate(BaseModel):
+    name: str
+    country_code: Optional[str] = None
+    year: int
+
+class TournamentPlayerCandidateResponse(BaseModel):
+    id: int
+    name: str
+    country_code: Optional[str] = None
+    year: int
+
+    class Config:
+        from_attributes = True

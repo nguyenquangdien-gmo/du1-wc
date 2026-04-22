@@ -36,6 +36,11 @@ def get_stadium_data(db: Session):
         STADIUM_CACHE = {s.name: s.country for s in stadiums}
     return STADIUM_CACHE
 
+@router.get("/countries", response_model=List[schemas.CountryResponse])
+def get_countries(db: Session = Depends(get_db)):
+    """Trả về danh sách quốc gia (không bao gồm blob ảnh flag để tối ưu load)"""
+    return db.query(models.Country).all()
+
 @router.get("/matches", response_model=List[schemas.MatchResponse])
 def get_matches(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user_optional)):
     # 1. Lấy năm hoạt động
@@ -96,6 +101,9 @@ def submit_prediction(
     current_user: models.User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
+    if current_user.email == "admin@runsystem.net":
+        raise HTTPException(status_code=403, detail="Tài khoản admin không được phép tham gia dự đoán.")
+        
     match = db.query(models.Match).filter(models.Match.id == prediction_data.match_id).first()
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
