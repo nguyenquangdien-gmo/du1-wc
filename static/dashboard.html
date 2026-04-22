@@ -351,7 +351,11 @@
                 </div>
 
                 <hr class="border-secondary mt-4">
-                <h6 class="text-start text-muted text-uppercase mb-3" style="font-size: 0.8rem;">Dự đoán của những người chơi khác</h6>
+                <div class="mt-4 mb-2 d-flex align-items-center">
+                    <div class="flex-grow-1 border-bottom border-secondary opacity-25"></div>
+                    <h6 class="mx-3 text-warning text-uppercase mb-0 fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">Dự đoán của những người chơi khác</h6>
+                    <div class="flex-grow-1 border-bottom border-secondary opacity-25"></div>
+                </div>
                 <ul class="list-group list-group-flush text-start shadow-sm" id="otherPredictionsList" style="background: transparent; border-radius: 8px;">
                     <!-- Predictions here -->
                 </ul>
@@ -733,12 +737,15 @@
         const match = window.allMatchesMap[matchId];
         if (!match) return;
         
+        // Clear previous state immediately
+        $('#otherPredictionsList').empty();
         $('#predictMatchId').val(match.id);
         const name1 = match.home_team_vn || match.home_team;
         const name2 = match.away_team_vn || match.away_team;
         $('#predictMatchTitle').text(`${name1} vs ${name2}`);
         
-        selectedTeamValue = ""; // reset
+        selectedTeamValue = ""; 
+        $('#luckyStar').prop('checked', false);
         $('#btnHome').html(`<img src="${match.home_team_flag}" class="me-2" style="width:20px"> ${name1}`).removeClass('active');
         $('#btnAway').html(`<img src="${match.away_team_flag}" class="me-2" style="width:20px"> ${name2}`).removeClass('active');
         
@@ -762,12 +769,27 @@
             $('#oddsText').html('Chưa có kèo / AI đang phân tích.');
         }
 
-        let isLocked = match.locked || match.status !== 'READY';
-        // Admin exception: allow predictions for testing/correction
-        if (currentUser && currentUser.is_admin) {
-            isLocked = false;
+        // Handle existing prediction highlight
+        if (match.user_prediction) {
+            const pred = match.user_prediction;
+            selectedTeamValue = pred.chosen_team;
+            $('#luckyStar').prop('checked', pred.use_lucky_star);
+            
+            // Compare with various possible name versions to ensure highlight works
+            const homeMatches = [name1, match.home_team, match.home_team_vn].filter(Boolean);
+            const awayMatches = [name2, match.away_team, match.away_team_vn].filter(Boolean);
+
+            if (pred.chosen_team === "Hòa") {
+                $('#btnDraw').addClass('active');
+            } else if (homeMatches.includes(pred.chosen_team)) {
+                $('#btnHome').addClass('active');
+            } else if (awayMatches.includes(pred.chosen_team)) {
+                $('#btnAway').addClass('active');
+            }
         }
 
+        let isLocked = match.locked || match.status !== 'READY';
+        
         $('#btnHome, #btnAway, #btnDraw, #luckyStar, #btnSubmitPredict').prop('disabled', isLocked);
         
         // Show status message
@@ -779,16 +801,23 @@
             $('#predictStatusMsg').hide();
         }
         
-        // Specifically block admin@runsystem.net from voting as requested
-        if (currentUser && currentUser.email === 'admin@runsystem.net') {
-            $('#btnSubmitPredict').hide();
-        } else if (match.status === 'READY' && !match.locked) {
+        // Show button if match is READY. Disable it for the default admin, hide for other statuses.
+        const isDefaultAdmin = currentUser && currentUser.email === 'admin@runsystem.net';
+        if (match.status === 'READY') {
             $('#btnSubmitPredict').show();
+            if (isDefaultAdmin) {
+                $('#btnSubmitPredict').prop('disabled', true).text('Admin không tham gia bình chọn');
+            } else {
+                $('#btnSubmitPredict').text('Xác Nhận').prop('disabled', isLocked);
+            }
         } else {
             $('#btnSubmitPredict').hide();
         }
         
-        if (match.lucky_star_enabled && match.status === 'READY') {
+        const stage = (match.stage || "").toLowerCase();
+        const isFinal = stage.includes('final') || stage.includes('chung kết');
+        
+        if (match.lucky_star_enabled && isFinal && match.status === 'READY') {
             $('#luckyStarContainer').show();
         } else {
             $('#luckyStarContainer').hide();
@@ -800,14 +829,25 @@
     }
 
     function selectTeam(btn) {
+        const matchId = $('#predictMatchId').val();
+        const match = window.allMatchesMap[matchId];
+        
+        // Strict requirement: No changes allowed if not in READY status
+        if (match.status !== 'READY' || match.locked) {
+            return;
+        }
+
+        if ($(btn).prop('disabled')) return; 
         $('.prediction-btn').removeClass('active');
         $(btn).addClass('active');
+        
+        const name1 = match.home_team_vn || match.home_team;
+        const name2 = match.away_team_vn || match.away_team;
+
         if ($(btn).attr('id') === 'btnDraw') {
             selectedTeamValue = "Hòa";
         } else {
-            let homeName = $('#predictMatchTitle').text().split(' vs ')[0];
-            let awayName = $('#predictMatchTitle').text().split(' vs ')[1];
-            selectedTeamValue = ($(btn).attr('id') === 'btnHome') ? homeName : awayName;
+            selectedTeamValue = ($(btn).attr('id') === 'btnHome') ? name1 : name2;
         }
     }
 
@@ -854,7 +894,8 @@
                 let star = p.use_lucky_star ? '🌟' : '';
                 let displayName = formatUserDisplay(p.user_full_name, p.user_email);
                 
-                let item = `<li class="list-group-item bg-transparent border-secondary border-opacity-25 text-light d-flex justify-content-between align-items-center py-2">
+                let item = `<li class="list-group-item border-secondary border-opacity-25 text-light d-flex justify-content-between align-items-center py-2 mb-1 shadow-sm" 
+                    style="background: rgba(255,255,255,0.05); border-radius: 6px;">
                     <span class="small">${displayName}${badgeMe}</span>
                     <span class="text-info fw-bold small">${p.chosen_team} ${star}</span>
                 </li>`;

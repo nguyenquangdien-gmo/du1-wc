@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, status
+from typing import Optional
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from sqlalchemy.orm import Session
@@ -34,3 +35,15 @@ def get_current_admin_user(current_user: models.User = Depends(get_current_activ
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Not enough privileges")
     return current_user
+
+def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        return db.query(models.User).filter(models.User.email == email).first()
+    except:
+        return None

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
+from pydantic import BaseModel
+from typing import Optional, List
 from datetime import datetime
 
 class UserCreate(BaseModel):
@@ -27,6 +27,70 @@ class CountryResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class StadiumResponse(BaseModel):
+    id: int
+    name: str
+    city: Optional[str] = None
+    country: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class MatchOddsReponse(BaseModel):
+    handicap: float
+    favorite_team: str
+    underdog_team: str
+    analysis_text: str
+
+    class Config:
+        from_attributes = True
+
+class PredictionResponse(BaseModel):
+    id: int
+    user_id: int
+    match_id: int
+    chosen_team: str
+    use_lucky_star: bool
+    result: Optional[str]
+    money_changed: int
+
+    class Config:
+        from_attributes = True
+
+class MatchResponse(BaseModel):
+    id: int
+    year: int
+    match_no: int
+    api_match_id: str
+    stage: str
+    group_name: Optional[str] = None
+    start_time: datetime
+    home_team: str
+    home_team_code: Optional[str] = None
+    home_team_flag: Optional[str] = None
+    away_team: str
+    away_team_code: Optional[str] = None
+    away_team_flag: Optional[str] = None
+    stadium: str
+    stadium_country: Optional[str] = None
+    home_score: Optional[int]
+    away_score: Optional[int]
+    status: str
+    locked: bool
+    lucky_star_enabled: bool
+    home_team_vn: Optional[str] = None
+    away_team_vn: Optional[str] = None
+    odds: Optional[MatchOddsReponse]
+    
+    notified_30m: Optional[bool] = False
+    notified_5m: Optional[bool] = False
+    notified_0m: Optional[bool] = False
+    comment_count: int = 0
+    user_prediction: Optional[PredictionResponse] = None # Added for UX
+
+    class Config:
+        from_attributes = True
+
 class UserResponse(BaseModel):
     id: int
     email: str
@@ -37,15 +101,6 @@ class UserResponse(BaseModel):
     total_wrong: int = 0
     money_lost: int = 0
     name_vn: Optional[str] = None # Added for country display in match list if nested
-
-    class Config:
-        from_attributes = True
-
-class StadiumResponse(BaseModel):
-    id: int
-    name: str
-    city: Optional[str] = None
-    country: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -80,64 +135,10 @@ class UserAdminUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_admin: Optional[bool] = None
 
-class MatchOddsReponse(BaseModel):
-    handicap: float
-    favorite_team: str
-    underdog_team: str
-    analysis_text: str
-
-    class Config:
-        from_attributes = True
-
-class MatchResponse(BaseModel):
-    id: int
-    year: int
-    match_no: int
-    api_match_id: str
-    stage: str
-    group_name: Optional[str] = None
-    start_time: datetime
-    home_team: str
-    home_team_code: Optional[str] = None
-    home_team_flag: Optional[str] = None
-    away_team: str
-    away_team_code: Optional[str] = None
-    away_team_flag: Optional[str] = None
-    stadium: str
-    stadium_country: Optional[str] = None
-    home_score: Optional[int]
-    away_score: Optional[int]
-    status: str
-    locked: bool
-    lucky_star_enabled: bool
-    home_team_vn: Optional[str] = None
-    away_team_vn: Optional[str] = None
-    odds: Optional[MatchOddsReponse]
-    
-    notified_30m: Optional[bool] = False
-    notified_5m: Optional[bool] = False
-    notified_0m: Optional[bool] = False
-    comment_count: int = 0
-
-    class Config:
-        from_attributes = True
-
 class PredictionCreate(BaseModel):
     match_id: int
     chosen_team: str
     use_lucky_star: bool = False
-
-class PredictionResponse(BaseModel):
-    id: int
-    user_id: int
-    match_id: int
-    chosen_team: str
-    use_lucky_star: bool
-    result: Optional[str]
-    money_changed: int
-
-    class Config:
-        from_attributes = True
 
 class AdminMatchUpdate(BaseModel):
     home_team: Optional[str] = None
@@ -157,6 +158,7 @@ class AdminMatchUpdate(BaseModel):
     odds_underdog_team: Optional[str] = None
     odds_handicap: Optional[float] = None
     odds_analysis_text: Optional[str] = None
+
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
@@ -166,6 +168,7 @@ class ProfileUpdate(BaseModel):
 
 class CommentCreate(BaseModel):
     content: str
+
 class CommentUpdate(BaseModel):
     content: str
 
@@ -182,7 +185,7 @@ class CommentResponse(BaseModel):
     user_email_prefix: str
     content: str
     created_at: datetime
-    reactions: list[CommentReactionStats] = []
+    reactions: List[CommentReactionStats] = []
 
     class Config:
         from_attributes = True

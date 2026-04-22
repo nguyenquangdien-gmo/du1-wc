@@ -5,7 +5,7 @@ from datetime import datetime, time
 import pytz
 import sqlalchemy
 from database import get_db, models, schemas
-from dependencies import get_current_active_user, get_current_admin_user
+from dependencies import get_current_active_user, get_current_admin_user, get_current_user_optional
 
 router = APIRouter(prefix="/api", tags=["matches", "predictions"])
 
@@ -37,7 +37,7 @@ def get_stadium_data(db: Session):
     return STADIUM_CACHE
 
 @router.get("/matches", response_model=List[schemas.MatchResponse])
-def get_matches(db: Session = Depends(get_db)):
+def get_matches(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user_optional)):
     # 1. Lấy năm hoạt động
     s_year = db.query(models.Setting).filter(models.Setting.key == "active_wc_year").first()
     active_year = int(s_year.value) if s_year else 2026
@@ -53,6 +53,11 @@ def get_matches(db: Session = Depends(get_db)):
     
     # 4. Đếm số lượng bình luận cho từng trận đấu
     comment_counts = {m_id: count for m_id, count in db.query(models.Comment.match_id, sqlalchemy.func.count(models.Comment.id)).group_by(models.Comment.match_id).all()}
+    
+    # 5. Lấy dự đoán của người dùng hiện tại (nếu có)
+    user_preds = {}
+    if current_user:
+        user_preds = {p.match_id: p for p in db.query(models.Prediction).filter(models.Prediction.user_id == current_user.id).all()}
     
     res = []
     for m in matches:
@@ -73,6 +78,9 @@ def get_matches(db: Session = Depends(get_db)):
         
         # Điền thông tin stadium country
         m_dict.stadium_country = s_data.get(m.stadium)
+        
+        # Điền dự đoán cá nhân
+        m_dict.user_prediction = user_preds.get(m.id)
         
         res.append(m_dict)
     return res
@@ -151,7 +159,7 @@ def get_leaderboard(db: Session = Depends(get_db)):
     ).outerjoin(
         models.UserStats, 
         (models.UserStats.user_id == models.User.id) & (models.UserStats.year == active_year)
-    ).filter(models.User.email != "admin@runsystem.net").all()
+    ).filter(models.User.email != "admin@runsystem.net", models.User.is_active == True).all()
     
     def format_user(u, s):
         return {
@@ -276,7 +284,7 @@ def get_match_comments(match_id: int, db: Session = Depends(get_db), current_use
             user_full_name=c.user.full_name,
             user_email_prefix=c.user.email.split('@')[0],
             content=c.content,
-            created_at=c.created_at,
+            created_at=c.created_at.replace(tzinfo=pytz.UTC),
             reactions=stats
         ))
     return res
