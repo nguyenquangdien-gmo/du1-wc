@@ -115,8 +115,6 @@ def submit_vote(vote_data: schemas.TournamentVoteCreate, db: Session = Depends(g
         stats = models.UserStats(user_id=current_user.id, year=active_year)
         db.add(stats)
     
-    stats.tournament_money_lost = (stats.tournament_money_lost or 0) + current_fee
-    
     new_vote = models.TournamentVote(
         user_id=current_user.id,
         year=active_year,
@@ -127,6 +125,33 @@ def submit_vote(vote_data: schemas.TournamentVoteCreate, db: Session = Depends(g
     db.add(new_vote)
     db.commit()
     return {"message": f"Đã ghi nhận dự đoán và trừ phí tham gia {current_fee:,} DU1"}
+
+@router.delete("/vote")
+def delete_tournament_vote(category: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    s_year = db.query(models.Setting).filter(models.Setting.key == "active_wc_year").first()
+    active_year = int(s_year.value) if s_year else 2026
+    
+    result = db.query(models.TournamentResult).filter(models.TournamentResult.year == active_year).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Tournament result record not found")
+
+    if category == "CHAMPION" and result.champion_locked:
+        raise HTTPException(status_code=400, detail="Bình chọn đội vô địch đã bị khóa")
+    if category == "BEST_PLAYER" and result.player_locked:
+        raise HTTPException(status_code=400, detail="Bình chọn cầu thủ đã bị khóa")
+
+    vote = db.query(models.TournamentVote).filter(
+        models.TournamentVote.user_id == current_user.id,
+        models.TournamentVote.year == active_year,
+        models.TournamentVote.category == category
+    ).first()
+
+    if not vote:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bình chọn của bạn")
+
+    db.delete(vote)
+    db.commit()
+    return {"message": "Đã xóa dự đoán thành công"}
 
 @router.post("/admin/settings")
 def update_tournament_settings(data: schemas.TournamentResultUpdate, db: Session = Depends(get_db), admin: models.User = Depends(get_current_admin_user)):
@@ -172,16 +197,27 @@ def finalize_tournament(db: Session = Depends(get_db), admin: models.User = Depe
         winners = [v for v in votes if v.selection.strip().lower() == res_val.strip().lower()]
         
         if not winners:
-            # Refund everyone for this category
+            # No one wins: No action needed (no one was charged initially)
+            continue
+        else:
+            # Distribute prize for winners, charge fee for losers
+            reward_per_winner = total_pool // len(winners)
+            
+            # Identify losers (those who voted in this category but didn't win)
+            winner_user_ids = [w.user_id for w in winners]
+            
             for v in votes:
                 stats = db.query(models.UserStats).filter(models.UserStats.user_id == v.user_id, models.UserStats.year == active_year).first()
-                if stats: stats.tournament_money_lost = (stats.tournament_money_lost or 0) - v.fee_paid
-        else:
-            # Distribute prize
-            reward = total_pool // len(winners)
-            for v in winners:
-                stats = db.query(models.UserStats).filter(models.UserStats.user_id == v.user_id, models.UserStats.year == active_year).first()
-                if stats: stats.tournament_money_lost = (stats.tournament_money_lost or 0) - reward # reward reduces debt
+                if not stats: continue
+                
+                if v.user_id in winner_user_ids:
+                    # Winner gets (Reward - Fee) as a deduction from their total debt/loss
+                    # Since we never charged the Fee, the effective gain is (Reward - Fee)
+                    net_gain = reward_per_winner - v.fee_paid
+                    stats.tournament_money_lost = (stats.tournament_money_lost or 0) - net_gain
+                else:
+                    # Loser gets charged the Fee they pledged
+                    stats.tournament_money_lost = (stats.tournament_money_lost or 0) + v.fee_paid
 
     result.is_finalized = True
     db.commit()

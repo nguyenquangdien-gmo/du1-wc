@@ -292,6 +292,12 @@
         #helpModalBody .badge-scheduled { background: #4b5563; color: #fff; }
         #helpModalBody .badge-finished { background: #1e40af; color: #fff; }
         @keyframes help-pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* Tournament Search Placeholder Fix */
+        #searchVotes::placeholder {
+            color: rgba(255, 255, 255, 0.45) !important;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -1374,18 +1380,25 @@
             $('#statusChampion').html('<span class="text-secondary">Chưa bình chọn</span>');
             $('#statusPlayer').html('<span class="text-secondary">Chưa bình chọn</span>');
 
+            // Init data
+            const isAdmin = currentUser && currentUser.email === 'admin@runsystem.net';
+
             tournamentSummary.user_votes.forEach(v => {
+                const deleteBtn = ` <a href="javascript:void(0)" class="text-danger ms-2" onclick="deleteTournamentVote('${v.category}')" title="Xóa dự đoán"><i class="fas fa-trash-alt"></i> Xóa</a>`;
                 if (v.category === 'CHAMPION') {
                     $('#voteChampionTeam').val(v.selection);
-                    $('#statusChampion').html('<span class="text-success small"><i class="fas fa-check-circle"></i> Đã ghi nhận</span>');
+                    let statusHtml = '<span class="text-success small"><i class="fas fa-check-circle"></i> Đã ghi nhận</span>';
+                    if (!tournamentSummary.champion_locked && !isAdmin) statusHtml += deleteBtn;
+                    $('#statusChampion').html(statusHtml);
                 } else if (v.category === 'BEST_PLAYER') {
                     $('#voteBestPlayer').val(v.selection);
-                    $('#statusPlayer').html('<span class="text-success small"><i class="fas fa-check-circle"></i> Đã ghi nhận</span>');
+                    let statusHtml = '<span class="text-success small"><i class="fas fa-check-circle"></i> Đã ghi nhận</span>';
+                    if (!tournamentSummary.player_locked && !isAdmin) statusHtml += deleteBtn;
+                    $('#statusPlayer').html(statusHtml);
                 }
             });
 
             // Lock check
-            const isAdmin = currentUser && currentUser.email === 'admin@runsystem.net';
             $('#voteChampionTeam, #btnVoteChampion').prop('disabled', tournamentSummary.champion_locked || isAdmin);
             $('#voteBestPlayer, #btnVotePlayer').prop('disabled', tournamentSummary.player_locked || isAdmin);
             
@@ -1419,17 +1432,34 @@
                    (v.selection || '').toLowerCase().includes(search);
         }).forEach(v => {
             body.append(`
-                <tr>
-                    <td class="fw-bold text-info">${v.user_full_name}</td>
+                <tr class="border-secondary border-opacity-10">
+                    <td class="fw-bold text-info ps-1">${v.user_full_name}</td>
                     <td>
-                        <span class="badge ${v.category === 'CHAMPION' ? 'bg-warning text-dark' : 'bg-info text-dark'}">
+                        <span class="badge ${v.category === 'CHAMPION' ? 'bg-warning text-dark' : 'bg-info text-dark'}" style="font-size: 0.6rem;">
                             ${v.category === 'CHAMPION' ? 'VÔ ĐỊCH' : 'CẦU THỦ'}
                         </span>
                     </td>
                     <td class="text-light">${v.selection}</td>
-                    <td class="text-end text-muted">${formatVND(v.fee_paid)}</td>
+                    <td class="text-end fw-bold text-warning pe-1">${formatVND(v.fee_paid)}</td>
                 </tr>
             `);
+        });
+    }
+
+    window.deleteTournamentVote = function(category) {
+        showConfirm(`Bạn có chắc chắn muốn xóa dự đoán ${category === 'CHAMPION' ? 'đội vô địch' : 'cầu thủ xuất sắc'}? Bản ghi sẽ bị loại bỏ khỏi quỹ chung.`, function() {
+            $.ajax({
+                url: `/api/tournament/vote?category=${category}`,
+                type: "DELETE",
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                success: function(res) {
+                    showMsg(res.message, "Thành công");
+                    loadTournamentData();
+                },
+                error: function(err) {
+                    showMsg(err.responseJSON?.detail || "Lỗi khi xóa dự đoán", "Thất bại");
+                }
+            });
         });
     }
 
@@ -1553,7 +1583,7 @@
                         </div>
                         <div class="mt-4 p-3 rounded bg-info bg-opacity-10 border border-info border-opacity-25 small text-info text-center">
                             <i class="fas fa-info-circle me-1"></i> <span id="tournamentFeeInfo">Phí tham gia: Vô địch 20.000 DU1, Cầu thủ 20.000 DU1.</span> <br/>
-                            Số tiền sẽ được trừ vào quỹ giải đấu riêng và hoàn lại nếu không ai chọn đúng.
+                            Số tiền này sẽ được ghi nhận vào bảng tổng kết kết quả sau khi giải đấu kết thúc.
                         </div>
                     </div>
                     <!-- All Votes Tab -->
