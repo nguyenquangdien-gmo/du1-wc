@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from alembic.config import Config
 from alembic import command
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 import os
 
 # Load environment variables from Render secrets path if it exists, otherwise from .env
@@ -36,7 +38,7 @@ def log_env_status():
 
 log_env_status()
 
-from database import engine, Base, models, SessionLocal
+from database import engine, Base, models, SessionLocal, get_db
 from init_data import seed_data
 
 @asynccontextmanager
@@ -79,8 +81,13 @@ os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+def health_check(db: Session = Depends(get_db)):
+    try:
+        # Thực hiện câu query đơn giản để check và giữ kết nối DB ko bị shutdown
+        db.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "db_error": str(e)}
 
 @app.get("/")
 def serve_frontend():
