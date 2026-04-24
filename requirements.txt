@@ -13,4 +13,4 @@ beautifulsoup4
 bcrypt
 pymysql
 cryptography
-alembic
+alembicanthropic

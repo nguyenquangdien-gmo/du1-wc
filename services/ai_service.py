@@ -3,6 +3,7 @@ import os
 import time
 from google import genai
 from google.genai import types
+from anthropic import Anthropic
 import json
 from typing import Dict, Any, List, Union
 from bs4 import BeautifulSoup, Comment
@@ -10,8 +11,15 @@ from bs4 import BeautifulSoup, Comment
 # To be set via environment mapping
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "[ENCRYPTION_KEY]")
 
-# Initialize GenAI Client
+# Initialize Gemini Client
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Claude Config
+CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY", "")
+CLAUDE_BASE_URL = os.environ.get("CLAUDE_BASE_URL", "https://llm.wokushop.com")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
+
+claude_client = Anthropic(api_key=CLAUDE_API_KEY, base_url=CLAUDE_BASE_URL) if CLAUDE_API_KEY else None
 
 default_generation_config = types.GenerateContentConfig(
     temperature=0.2,
@@ -32,9 +40,33 @@ default_generation_config = types.GenerateContentConfig(
 MODEL_PRO = "gemini-3.1-pro-preview"
 MODEL_FLASH = "gemini-3-flash-preview"
 
+def prompt_claude_json(contents: Union[str, List[Any]]) -> Any:
+    if not claude_client:
+        return None
+    try:
+        prompt_text = ""
+        if isinstance(contents, list):
+            # Filter out non-string objects (like Gemini File objects) for Claude
+            prompt_text = " ".join([str(c) for c in contents if isinstance(c, str)])
+        else:
+            prompt_text = contents
+
+        print(f"DEBUG: Falling back to Claude ({CLAUDE_MODEL})...")
+        response = claude_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=4096,
+            system="You are a helpful assistant that always responds in valid JSON format. Do not include any explanation outside the JSON.",
+            messages=[{"role": "user", "content": prompt_text}],
+        )
+        text = response.content[0].text
+        text = text.replace('```json', '').replace('```', '').strip()
+        return json.loads(text)
+    except Exception as e:
+        print(f"DEBUG: Claude Failed: {e}")
+        return None
+
 def prompt_gemini_json(contents: Union[str, List[Any]]) -> Any:
     # Try Pro first
-    last_text = ""
     try:
         response = client.models.generate_content(
             model=MODEL_PRO,
@@ -42,9 +74,6 @@ def prompt_gemini_json(contents: Union[str, List[Any]]) -> Any:
             config=default_generation_config
         )
         print("Finish reason:", response.candidates[0].finish_reason)
-        print("Usage:", response.usage_metadata)
-        print("Thoughts tokens:", getattr(response.usage_metadata, "thoughts_token_count", 0))
-        print("Output tokens:", response.usage_metadata.candidates_token_count)
         last_text = response.text
         with open(f"./wiki/debug_ai_pro_{datetime.now().year}.json", "w", encoding="utf-8") as f:
             f.write(last_text)
@@ -52,18 +81,20 @@ def prompt_gemini_json(contents: Union[str, List[Any]]) -> Any:
         text = last_text.replace('```json', '').replace('```', '')
         return json.loads(text)
     except Exception as e_pro:
-        print(f"DEBUG: Gemini Pro Failed: {e_pro}. Falling back to Flash...")
-        # Fallback to Flash
+        print(f"DEBUG: Gemini Pro Failed: {e_pro}. Falling back to Claude...")
+        # Fallback 1: Claude
+        res_claude = prompt_claude_json(contents)
+        if res_claude:
+            return res_claude
+            
+        print("DEBUG: Claude also Failed. Falling back to Flash...")
+        # Fallback 2: Flash
         try:
             response = client.models.generate_content(
                 model=MODEL_FLASH,
                 contents=contents,
                 config=default_generation_config
             )
-            print("Finish reason:", response.candidates[0].finish_reason)
-            print("Usage:", response.usage_metadata)
-            print("Thoughts tokens:", getattr(response.usage_metadata, "thoughts_token_count", 0))
-            print("Output tokens:", response.usage_metadata.candidates_token_count)
             last_text = response.text
             with open(f"./wiki/debug_ai_flash_{datetime.now().year}.json", "w", encoding="utf-8") as f:
                 f.write(last_text)
