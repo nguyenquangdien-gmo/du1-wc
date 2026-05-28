@@ -643,6 +643,7 @@
     var stadiums = [];
     var playerCandidates = [];
     let stadiumModal;
+    let matchesCache = {};
 
     // --- HELPER FUNCTIONS ---
     function formatVND(val) {
@@ -801,7 +802,9 @@
             stadiums = [...new Set(data.filter(m => m.stadium).map(m => m.stadium))];
             setupAutocompletes();
 
+            matchesCache = {};
             data.sort((a,b) => a.match_no - b.match_no).forEach(m => {
+                matchesCache[m.id] = m;
                 let badge = '';
                 if(m.status === 'READY') badge = '<span class="badge badge-ready">READY</span>';
                 else if(m.status === 'LIVE') badge = '<span class="badge badge-live">LIVE</span>';
@@ -817,7 +820,7 @@
                         <td class="small">${new Date(m.start_time).toLocaleString('vi-VN')}</td>
                         <td class="text-center">${m.lucky_star_enabled ? '🌟' : ''}</td>
                         <td class="pe-3">
-                            <button class="btn btn-sm btn-outline-info" onclick='openEditModal(${JSON.stringify(m)})'>Sửa</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="openEditModal(${m.id})">Sửa</button>
                         </td>
                     </tr>
                 `);
@@ -852,7 +855,12 @@
     }
 
     // --- MATCH ACTIONS ---
-    function openEditModal(m) {
+    function openEditModal(mOrId) {
+        let m = mOrId;
+        if (typeof mOrId === 'number' || typeof mOrId === 'string') {
+            m = matchesCache[mOrId];
+        }
+        if (!m) return;
         $('#editMid').val(m.id);
         $('#editHome').val(m.home_team);
         $('#editHomeCode').val(m.home_team_code || "");
