@@ -115,6 +115,7 @@ def task_live_score_updater():
     live_matches = db.query(models.Match).filter(models.Match.status == "LIVE").all()
     for match in live_matches:
         update = simulate_match_live_update(match.home_team, match.away_team, match.home_score, match.away_score)
+        print(f"AI Live Update Result for {match.home_team} vs {match.away_team}: {update}")
         match.home_score = update.get("home_score", match.home_score)
         match.away_score = update.get("away_score", match.away_score)
         
