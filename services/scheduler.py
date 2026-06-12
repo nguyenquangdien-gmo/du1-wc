@@ -1,12 +1,12 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import Session
 from database import SessionLocal, models
-from services.ai_service import simulate_match_live_update
 from datetime import datetime, timedelta
 import pytz
 import requests
 import json
 import sqlalchemy
+import os
 
 scheduler = BackgroundScheduler()
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
@@ -91,6 +91,39 @@ def calculate_winner_asian_handicap(home_team, away_team, home_score, away_score
     else:
         return "DRAW"
 
+def get_match_result_from_api(football_data_id: int):
+    api_key = os.environ.get("FOOTBALL_DATA_API_KEY")
+    if not api_key:
+        print("ERROR: FOOTBALL_DATA_API_KEY is not set in environment.")
+        return None
+        
+    url = f"https://api.football-data.org/v4/matches/{football_data_id}"
+    headers = {"X-Auth-Token": api_key}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            status = data.get("status")
+            score_data = data.get("score", {})
+            full_time_score = score_data.get("fullTime", {})
+            
+            home_score = full_time_score.get("home")
+            away_score = full_time_score.get("away")
+            
+            return {
+                "home_score": home_score if home_score is not None else 0,
+                "away_score": away_score if away_score is not None else 0,
+                "match_finished": status == "FINISHED",
+                "status": status
+            }
+        else:
+            print(f"API Error fetching match {football_data_id}: Status {response.status_code}, Response: {response.text}")
+            return None
+    except Exception as e:
+        print(f"Exception fetching match {football_data_id}: {e}")
+        return None
+
 def task_live_score_updater():
     """Runs every 5 minutes to update scores of LIVE matches, and start SCHEDULED matches that passed their start time"""
     db = get_db()
@@ -114,12 +147,20 @@ def task_live_score_updater():
     # Update matches
     live_matches = db.query(models.Match).filter(models.Match.status == "LIVE").all()
     for match in live_matches:
-        update = simulate_match_live_update(match.home_team, match.away_team, match.home_score, match.away_score)
-        print(f"AI Live Update Result for {match.home_team} vs {match.away_team}: {update}")
-        match.home_score = update.get("home_score", match.home_score)
-        match.away_score = update.get("away_score", match.away_score)
+        if not match.football_data_id:
+            print(f"WARNING: Match {match.match_no} is LIVE but lacks football_data_id. Skipping API update.")
+            continue
+            
+        update = get_match_result_from_api(match.football_data_id)
+        if not update:
+            print(f"WARNING: Failed to fetch API results for LIVE Match {match.match_no}. Skipping this run.")
+            continue
+            
+        print(f"API Live Update Result for Match {match.match_no} ({match.home_team} vs {match.away_team}): {update}")
+        match.home_score = update["home_score"]
+        match.away_score = update["away_score"]
         
-        if update.get("match_finished", True):
+        if update["match_finished"]:
             match.status = "FINISHED"
             match_date = match.start_time.date()
             # Settle predictions

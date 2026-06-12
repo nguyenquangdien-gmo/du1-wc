@@ -65,6 +65,7 @@ class Match(Base):
     __table_args__ = (UniqueConstraint('year', 'match_no', name='uq_match_year_no'),)
 
     api_match_id = Column(String(100), unique=True, index=True)
+    football_data_id = Column(Integer, nullable=True, unique=True, index=True)
     stage = Column(String(100)) # e.g., Group Stage, Round of 16, Quarter-Final
     group_name = Column(String(10), nullable=True) # e.g. A, B, C...
     start_time = Column(DateTime, index=True)
