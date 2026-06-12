@@ -310,7 +310,7 @@ def task_match_notifications():
                 if not getattr(m, flag_attr):
                     # Trigger condition: 
                     # For 30m: diff is between 29.0 and 31.0
-                    if wait_min - 1.0 <= diff_minutes <= wait_min + 1.0:
+                    if wait_min - 4.0 <= diff_minutes <= wait_min + 4.0:
                         # Format message
                         msg = template.replace("{{stage}}", m.stage or "") \
                                       .replace("{{home_team}}", m.home_team or "") \
