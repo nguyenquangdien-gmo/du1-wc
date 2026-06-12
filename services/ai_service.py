@@ -139,13 +139,13 @@ def generate_match_odds_and_analysis(team1: str, team2: str, stage: str = "", st
 
 def simulate_match_live_update(home_team: str, away_team: str, current_home_score: int, current_away_score: int) -> Dict:
     prompt = f"""
-    Simulate a football match event between {home_team} and {away_team}.
+    Hãy tìm kiếm và lấy kết quả hiện tại của trận đấu giữa 2 đội {home_team} và {away_team} trong khuôn khổ worlcup 2026.
     Current score: {home_team} {current_home_score} - {current_away_score} {away_team}.
     Decide if a goal is scored in the next 5 minutes.
     Return ONLY a valid JSON object with keys:
     - "home_score" (integer, new score)
     - "away_score" (integer, new score)
-    - "match_finished" (boolean, probabilistically true if you think 90 minutes are up, let's say 10% chance for simulation purposes)
+    - "match_finished" (boolean - true if match has ended)
     """
     return prompt_gemini_json(prompt) or {
         "home_score": current_home_score,

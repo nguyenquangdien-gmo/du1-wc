@@ -125,7 +125,7 @@ def task_live_score_updater():
         match.home_score = update.get("home_score", match.home_score)
         match.away_score = update.get("away_score", match.away_score)
         
-        if update.get("match_finished", False):
+        if update.get("match_finished", True):
             match.status = "FINISHED"
             match_date = match.start_time.date()
             # Settle predictions
@@ -134,6 +134,8 @@ def task_live_score_updater():
             
             # Check and open betting for next matches
             check_and_ready_next_day(db, match_date)
+        else
+            db.commit()
     db.close()
 
 def check_and_ready_next_day(db: Session, finished_date):
