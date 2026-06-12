@@ -175,6 +175,12 @@ def task_live_score_updater():
 
 def check_and_ready_next_day(db: Session, finished_date):
     """If all matches on finished_date are done, open READY for the next scheduled date"""
+    # Nếu có bất kỳ trận nào đang ở trạng thái READY thì bỏ qua không update trạng thái
+    has_ready_match = db.query(models.Match).filter(models.Match.status == "READY").first()
+    if has_ready_match:
+        print("Bỏ qua tự động mở ngày tiếp theo vì đang có trận ở trạng thái READY.")
+        return
+
     # 1. Check if all matches on this date are FINISHED
     # (Assuming naive start_time in DB represents local date)
     day_matches = db.query(models.Match).filter(sqlalchemy.func.date(models.Match.start_time) == finished_date).all()
