@@ -714,11 +714,6 @@
             if (isShowNext6 || isShowLive) {
                 $('#matchTabs').hide();
                 containers['groups'].empty();
-                if (isShowLive) {
-                    containers['groups'].append('<div class="col-12 mt-2 mb-2"><h5 class="text-danger border-start border-danger border-4 ps-2 text-start text-uppercase small fw-bold">Trận đấu đang diễn ra</h5></div>');
-                } else {
-                    containers['groups'].append('<div class="col-12 mt-2 mb-2"><h5 class="text-info border-start border-info border-4 ps-2 text-start text-uppercase small fw-bold">6 Trận đấu tiếp theo</h5></div>');
-                }
             } else {
                 $('#matchTabs').show();
             }
@@ -740,12 +735,49 @@
                     
                     if (m.status === 'LIVE') {
                         badgeClass = 'badge-live';
-                        // Calculate elapsed time
+                        // Calculate elapsed time (accounting for half-time and extra-time breaks)
                         const start = new Date(m.start_time);
                         const now = new Date();
                         const diffMs = now - start;
                         const diffMins = Math.max(0, Math.floor(diffMs / 60000));
-                        elapsedHtml = `<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">${diffMins}'</span>`;
+                        
+                        let isKnockout = !m.group_name;
+                        let isTie = m.home_score === m.away_score;
+                        
+                        let displayMins = "";
+                        if (diffMins <= 45) {
+                            displayMins = `${diffMins}'`;
+                        } else if (diffMins <= 50) {
+                            displayMins = `45+${diffMins - 45}'`; // Bù giờ hiệp 1
+                        } else if (diffMins <= 65) {
+                            displayMins = "HT"; // Nghỉ giữa hiệp
+                        } else if (diffMins <= 110) {
+                            displayMins = `${diffMins - 20}'`; // Hiệp 2 (phút 46 - 90)
+                        } else if (diffMins <= 115) {
+                            displayMins = `90+${diffMins - 110}'`; // Bù giờ hiệp 2
+                        } else {
+                            if (isKnockout && isTie) {
+                                if (diffMins <= 120) {
+                                    displayMins = "ET Break"; // Nghỉ trước hiệp phụ
+                                } else if (diffMins <= 135) {
+                                    displayMins = `${diffMins - 30}'`; // Hiệp phụ 1 (phút 91 - 105)
+                                } else if (diffMins <= 140) {
+                                    displayMins = `105+${diffMins - 135}'`; // Bù giờ hiệp phụ 1
+                                } else if (diffMins <= 145) {
+                                    displayMins = "ET HT"; // Nghỉ giữa 2 hiệp phụ
+                                } else if (diffMins <= 160) {
+                                    displayMins = `${diffMins - 39}'`; // Hiệp phụ 2 (phút 106 - 120)
+                                } else if (diffMins <= 165) {
+                                    displayMins = `120+${diffMins - 160}'`; // Bù giờ hiệp phụ 2
+                                } else {
+                                    displayMins = "120+5'";
+                                }
+                            } else {
+                                displayMins = "90+5'";
+                            }
+                        }
+                        
+                        elapsedHtml = `<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">${displayMins}</span>`;
                     }
                     else if (m.status === 'READY') badgeClass = 'badge-ready';
                     else if (m.status === 'FINISHED') badgeClass = 'badge-finished';
@@ -802,21 +834,30 @@
                     </div>`;
                 }
 
-            if (isShowLive) {
-                let liveMatches = data.filter(m => m.status === 'LIVE');
-                if (liveMatches.length === 0) {
-                    containers['groups'].append('<div class="col-12 text-center py-5 opacity-50">Hiện không có trận đấu nào đang diễn ra.</div>');
-                } else {
-                    liveMatches.forEach(m => containers['groups'].append(getMatchHTML(m)));
+            if (isShowLive || isShowNext6) {
+                if (isShowLive) {
+                    containers['groups'].append('<div class="col-12 mt-2 mb-2"><h5 class="text-danger border-start border-danger border-4 ps-2 text-start text-uppercase small fw-bold">Trận đấu đang diễn ra</h5></div>');
+                    let liveMatches = data.filter(m => m.status === 'LIVE');
+                    if (liveMatches.length === 0) {
+                        containers['groups'].append('<div class="col-12 text-center py-3 opacity-50">Hiện không có trận đấu nào đang diễn ra.</div>');
+                    } else {
+                        liveMatches.forEach(m => containers['groups'].append(getMatchHTML(m)));
+                    }
                 }
-            } else if (isShowNext6) {
-                let upcoming = data.filter(m => m.status !== 'FINISHED' && m.status !== 'LIVE')
-                                  .sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
-                                  .slice(0, 6);
                 
-                upcoming.forEach(m => {
-                    containers['groups'].append(getMatchHTML(m));
-                });
+                if (isShowNext6) {
+                    containers['groups'].append('<div class="col-12 mt-4 mb-2"><h5 class="text-info border-start border-info border-4 ps-2 text-start text-uppercase small fw-bold">6 Trận đấu tiếp theo</h5></div>');
+                    let upcoming = data.filter(m => m.status !== 'FINISHED' && m.status !== 'LIVE')
+                                      .sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
+                                      .slice(0, 6);
+                    if (upcoming.length === 0) {
+                        containers['groups'].append('<div class="col-12 text-center py-3 opacity-50">Không có trận đấu tiếp theo.</div>');
+                    } else {
+                        upcoming.forEach(m => {
+                            containers['groups'].append(getMatchHTML(m));
+                        });
+                    }
+                }
             } else {
                 let groupStagesDict = {};
                 data.forEach(m => {
