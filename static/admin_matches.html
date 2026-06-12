@@ -620,6 +620,37 @@
     </div>
 </div>
 
+<!-- Update Score Modal -->
+<div class="modal fade" id="updateScoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #f0a500;">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold" id="scoreModalTitle">Cập nhật tỉ số</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateScoreForm">
+                    <input type="hidden" id="scoreMid">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small text-uppercase fw-bold" id="scoreHomeLabel">Đội 1</label>
+                            <input type="number" min="0" class="form-control bg-dark text-white border-secondary" id="scoreHomeInput" placeholder="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-uppercase fw-bold" id="scoreAwayLabel">Đội 2</label>
+                            <input type="number" min="0" class="form-control bg-dark text-white border-secondary" id="scoreAwayInput" placeholder="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-warning btn-sm px-4 fw-bold" id="btnSaveScore" onclick="saveScore()">Lưu & Quyết toán</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
@@ -820,7 +851,8 @@
                         <td class="small">${new Date(m.start_time).toLocaleString('vi-VN')}</td>
                         <td class="text-center">${m.lucky_star_enabled ? '🌟' : ''}</td>
                         <td class="pe-3">
-                            <button class="btn btn-sm btn-outline-info" onclick="openEditModal(${m.id})">Sửa</button>
+                            <button class="btn btn-sm btn-outline-info me-1" onclick="openEditModal(${m.id})">Sửa</button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="openScoreModal(${m.id})">Tỉ số</button>
                         </td>
                     </tr>
                 `);
@@ -925,6 +957,56 @@
             },
             error: (err) => showMsg(err.responseJSON?.detail || "Lỗi cập nhật", 'Lỗi'),
             complete: () => setLoadingState('btnSaveMatch', false)
+        });
+    }
+
+    function openScoreModal(matchId) {
+        let m = matchesCache[matchId];
+        if (!m) return;
+        $('#scoreMid').val(m.id);
+        $('#scoreModalTitle').text(`Nhập tỉ số: ${m.home_team} vs ${m.away_team}`);
+        $('#scoreHomeLabel').text(m.home_team);
+        $('#scoreAwayLabel').text(m.away_team);
+        $('#scoreHomeInput').val(m.home_score !== null ? m.home_score : '');
+        $('#scoreAwayInput').val(m.away_score !== null ? m.away_score : '');
+        
+        let scoreModal = new bootstrap.Modal(document.getElementById('updateScoreModal'));
+        scoreModal.show();
+    }
+
+    function saveScore() {
+        let mid = $('#scoreMid').val();
+        let homeScoreStr = $('#scoreHomeInput').val();
+        let awayScoreStr = $('#scoreAwayInput').val();
+        
+        if (homeScoreStr === '' || awayScoreStr === '') {
+            showMsg('Vui lòng nhập đầy đủ tỉ số của cả 2 đội!', 'Thông báo');
+            return;
+        }
+        
+        let payload = {
+            status: 'FINISHED',
+            home_score: parseInt(homeScoreStr),
+            away_score: parseInt(awayScoreStr)
+        };
+        
+        setLoadingState('btnSaveScore', true);
+        $.ajax({
+            url: `/api/admin/matches/${mid}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function() {
+                const modalEl = document.getElementById('updateScoreModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                
+                showMsg('Cập nhật tỉ số và quyết toán trận đấu thành công!', 'Thành công', () => {
+                    loadMatches();
+                });
+            },
+            error: (err) => showMsg(err.responseJSON?.detail || "Lỗi cập nhật tỉ số", 'Lỗi'),
+            complete: () => setLoadingState('btnSaveScore', false)
         });
     }
 

@@ -12,14 +12,7 @@ scheduler = BackgroundScheduler()
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
 def get_db():
-    db = SessionLocal()
-    try:
-        return db
-    except Exception as e:
-        db.rollback()
-        raise e
-    finally:
-        db.close()
+    return SessionLocal()
 
 def get_next_run_time(time_str: str):
     if not time_str: return None
@@ -134,7 +127,7 @@ def task_live_score_updater():
             
             # Check and open betting for next matches
             check_and_ready_next_day(db, match_date)
-        else
+        else:
             db.commit()
     db.close()
 
@@ -161,6 +154,21 @@ def check_and_ready_next_day(db: Session, finished_date):
             for nm in next_day_matches:
                 nm.status = "READY"
             db.commit()
+
+def unsettle_match(db: Session, match: models.Match):
+    predictions = db.query(models.Prediction).filter_by(match_id=match.id).all()
+    for pred in predictions:
+        stats = db.query(models.UserStats).filter_by(user_id=pred.user_id, year=match.year).first()
+        if stats:
+            if pred.result == "WON":
+                stats.total_correct = max(0, stats.total_correct - 1)
+            elif pred.result == "LOST":
+                stats.total_wrong = max(0, stats.total_wrong - 1)
+            stats.money_lost -= pred.money_changed
+            
+        pred.result = None
+        pred.money_changed = 0
+    db.commit()
 
 def settle_match(db: Session, match: models.Match):
     penalty_setting = db.query(models.Setting).filter_by(key="penalty_per_loss").first()

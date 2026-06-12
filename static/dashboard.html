@@ -406,7 +406,7 @@
                         <th class="ps-2">#</th>
                         <th>Họ tên</th>
                         <th class="text-center">Dự đoán</th>
-                        <th class="text-end pe-2" style="cursor:pointer" onclick="toggleSortLeaderboard()">💸 Thiệt hại <span id="sortDir">▼</span></th>
+                        <th class="text-end pe-2" style="cursor:pointer" onclick="toggleSortLeaderboard()">💸 Thiệt hại <span id="sortDir">▲</span></th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
@@ -1028,7 +1028,7 @@
     }
 
     let leaderboardData = [];
-    let sortAsc = false;
+    let sortAsc = true;
 
     function loadLeaderboard() {
         $.get('/api/leaderboard', function(data) {
@@ -1071,6 +1071,9 @@
             else if (index === 1) rankClass = "text-light";
             else if (index === 2) rankClass = "text-danger";
             
+            let balance = -u.money_lost;
+            let balanceStr = (balance > 0 ? "+" : "") + balance.toLocaleString('vi-VN');
+
             body.append(`
                 <tr class="${index < 3 ? 'bg-dark bg-opacity-25' : ''}">
                     <td class="ps-2 fw-bold ${rankClass}">${index + 1}</td>
@@ -1078,7 +1081,7 @@
                     <td class="text-center">
                         <span class="text-success">${u.total_correct}</span><span class="mx-1 opacity-50">/</span><span class="text-danger">${u.total_wrong}</span>
                     </td>
-                    <td class="text-end pe-2 text-warning fw-bold">-${u.money_lost.toLocaleString('vi-VN')} DU1</td>
+                    <td class="text-end pe-2 text-warning fw-bold">${balanceStr} DU1</td>
                 </tr>
             `);
         });
