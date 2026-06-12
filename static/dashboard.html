@@ -261,6 +261,7 @@
             font-weight: 700;
             background: linear-gradient(45deg, #fff, #e94560);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             font-size: 2rem;
             margin-bottom: 10px;
@@ -395,22 +396,31 @@
         <div class="sidebar-toggle-tab" onclick="toggleLeaderboard()">
             BXH
         </div>
-        <div class="d-flex justify-content-between align-items-center mb-3 px-3">
+        <div class="d-flex justify-content-between align-items-center px-3">
             <h5 class="fw-bold text-warning mb-0">🏆 Leaderboard</h5>
             <button class="btn-close btn-close-white d-lg-none" onclick="toggleLeaderboard()"></button>
         </div>
+        <div class="px-3 mb-2 d-flex justify-content-between align-items-center">
+            <small class="text-muted" style="font-size: 0.7rem;">Đơn vị: DU1</small>
+            <span class="badge bg-danger text-white" style="font-size: 0.7rem;">Tổng thiệt hại: <span id="totalSystemDamage">0</span></span>
+        </div>
         <div class="sidebar-scroll">
-            <table class="table table-dark table-hover mb-0 align-middle" style="font-size: 0.85rem;">
+            <table class="table table-dark table-hover mb-0 align-middle" style="font-size: 0.78rem;">
                 <thead>
-                    <tr class="text-warning text-uppercase small">
-                        <th class="ps-2">#</th>
-                        <th>Họ tên</th>
-                        <th class="text-center">Dự đoán</th>
-                        <th class="text-end pe-2" style="cursor:pointer" onclick="toggleSortLeaderboard()">💸 Thiệt hại <span id="sortDir">▲</span></th>
+                    <tr class="text-warning text-uppercase small" style="font-size: 0.72rem;">
+                        <th class="ps-2" style="width: 8%">#</th>
+                        <th style="width: 32%">Họ tên</th>
+                        <th class="text-center" style="width: 20%">Dự đoán</th>
+                        <th class="text-end" style="cursor:pointer; width: 20%;" onclick="toggleSortLeaderboard('match')">Trận <span id="sortDirMatch"></span></th>
+                        <th class="text-end pe-2" style="cursor:pointer; width: 20%;" onclick="toggleSortLeaderboard('total')">Tổng <span id="sortDirTotal">▲</span></th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
                 </tbody>
+                <tfoot class="border-top border-secondary fw-bold text-warning" style="background-color: #1a1a2e; position: sticky; bottom: 0; z-index: 10;">
+                    <tr id="leaderboardFooterRow">
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
@@ -1069,6 +1079,7 @@
     }
 
     let leaderboardData = [];
+    let sortBy = 'total'; // 'match' or 'total'
     let sortAsc = true;
 
     function loadLeaderboard() {
@@ -1078,9 +1089,23 @@
         });
     }
 
-    function toggleSortLeaderboard() {
-        sortAsc = !sortAsc;
-        $('#sortDir').text(sortAsc ? '▲' : '▼');
+    function toggleSortLeaderboard(field) {
+        if (sortBy === field) {
+            sortAsc = !sortAsc;
+        } else {
+            sortBy = field;
+            sortAsc = true;
+        }
+        
+        // Update sort indicators
+        if (sortBy === 'match') {
+            $('#sortDirMatch').text(sortAsc ? '▲' : '▼');
+            $('#sortDirTotal').text('');
+        } else {
+            $('#sortDirTotal').text(sortAsc ? '▲' : '▼');
+            $('#sortDirMatch').text('');
+        }
+        
         renderLeaderboard();
     }
 
@@ -1100,11 +1125,22 @@
 
     function renderLeaderboard() {
         let sorted = [...leaderboardData].sort((a, b) => {
-            return sortAsc ? (a.money_lost - b.money_lost) : (b.money_lost - a.money_lost);
+            if (sortBy === 'match') {
+                return sortAsc ? (a.money_lost - b.money_lost) : (b.money_lost - a.money_lost);
+            } else {
+                return sortAsc ? (a.total_money_lost - b.total_money_lost) : (b.total_money_lost - a.total_money_lost);
+            }
         });
 
         let body = $('#leaderboardBody');
         body.empty();
+        
+        let totalCorrect = 0;
+        let totalWrong = 0;
+        let totalMatchBalance = 0;
+        let totalTotalBalance = 0;
+        let totalSystemDamage = 0;
+
         sorted.forEach((u, index) => {
             let displayName = formatUserDisplay(u.full_name, u.email);
             let rankClass = "";
@@ -1112,8 +1148,18 @@
             else if (index === 1) rankClass = "text-light";
             else if (index === 2) rankClass = "text-danger";
             
-            let balance = -u.money_lost;
-            let balanceStr = (balance > 0 ? "+" : "") + balance.toLocaleString('vi-VN');
+            let balanceMatch = -u.money_lost;
+            let balanceMatchStr = (balanceMatch > 0 ? "+" : "") + balanceMatch.toLocaleString('vi-VN');
+
+            let balanceTotal = -u.total_money_lost;
+            let balanceTotalStr = (balanceTotal > 0 ? "+" : "") + balanceTotal.toLocaleString('vi-VN');
+
+            // Add to totals
+            totalCorrect += (u.total_correct || 0);
+            totalWrong += (u.total_wrong || 0);
+            totalMatchBalance += balanceMatch;
+            totalTotalBalance += balanceTotal;
+            totalSystemDamage += (u.total_money_lost || 0);
 
             body.append(`
                 <tr class="${index < 3 ? 'bg-dark bg-opacity-25' : ''}">
@@ -1122,10 +1168,31 @@
                     <td class="text-center">
                         <span class="text-success">${u.total_correct}</span><span class="mx-1 opacity-50">/</span><span class="text-danger">${u.total_wrong}</span>
                     </td>
-                    <td class="text-end pe-2 text-warning fw-bold">${balanceStr} DU1</td>
+                    <td class="text-end text-light">${balanceMatchStr}</td>
+                    <td class="text-end pe-2 text-warning fw-bold">${balanceTotalStr}</td>
                 </tr>
             `);
         });
+
+        // Format total sums
+        let totalMatchBalanceStr = (totalMatchBalance > 0 ? "+" : "") + totalMatchBalance.toLocaleString('vi-VN');
+        let totalTotalBalanceStr = (totalTotalBalance > 0 ? "+" : "") + totalTotalBalance.toLocaleString('vi-VN');
+
+        // Update total system damage badge
+        $('#totalSystemDamage').text(totalSystemDamage.toLocaleString('vi-VN'));
+
+        // Render table footer row
+        let footerRow = $('#leaderboardFooterRow');
+        footerRow.empty();
+        footerRow.append(`
+            <td class="ps-2"></td>
+            <td class="text-warning">Tổng cộng</td>
+            <td class="text-center">
+                <span class="text-success">${totalCorrect}</span><span class="mx-1 opacity-50">/</span><span class="text-danger">${totalWrong}</span>
+            </td>
+            <td class="text-end text-light">${totalMatchBalanceStr}</td>
+            <td class="text-end pe-2 text-warning">${totalTotalBalanceStr}</td>
+        `);
     }
 
     function openAccountSettingsModal() {

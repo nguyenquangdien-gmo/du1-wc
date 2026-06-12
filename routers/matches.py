@@ -170,17 +170,22 @@ def get_leaderboard(db: Session = Depends(get_db)):
     ).filter(models.User.email != "admin@runsystem.net", models.User.is_active == True).all()
     
     def format_user(u, s):
+        money_lost = s.money_lost if s else 0
+        tournament_money_lost = s.tournament_money_lost if s else 0
+        total_money_lost = money_lost + tournament_money_lost
         return {
             "email": u.email, 
             "full_name": u.full_name,
-            "money_lost": s.money_lost if s else 0, 
+            "money_lost": money_lost,
+            "tournament_money_lost": tournament_money_lost,
+            "total_money_lost": total_money_lost,
             "total_correct": s.total_correct if s else 0, 
             "total_wrong": s.total_wrong if s else 0
         }
 
     formatted = [format_user(u, s) for u, s in results]
-    # Sort by money_lost ascending (lowest debt first), then correct desc, wrong asc
-    formatted.sort(key=lambda x: (x["money_lost"], -x["total_correct"], x["total_wrong"]))
+    # Sort by total_money_lost ascending (lowest debt first), then correct desc, wrong asc
+    formatted.sort(key=lambda x: (x["total_money_lost"], -x["total_correct"], x["total_wrong"]))
     return formatted
 
 from pydantic import BaseModel
