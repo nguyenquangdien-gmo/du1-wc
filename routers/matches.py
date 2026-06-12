@@ -179,8 +179,8 @@ def get_leaderboard(db: Session = Depends(get_db)):
         }
 
     formatted = [format_user(u, s) for u, s in results]
-    # Sort by money_lost descending
-    formatted.sort(key=lambda x: x["money_lost"], reverse=True)
+    # Sort by money_lost ascending (lowest debt first), then correct desc, wrong asc
+    formatted.sort(key=lambda x: (x["money_lost"], -x["total_correct"], x["total_wrong"]))
     return formatted
 
 from pydantic import BaseModel
@@ -207,6 +207,21 @@ def admin_update_match(match_id: int, data: schemas.AdminMatchUpdate, current_ad
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
         
+    was_finished = match.status == "FINISHED"
+    old_home_score = match.home_score
+    old_away_score = match.away_score
+
+    # Detect if we need to unsettle existing calculations
+    status_changing_away_from_finished = was_finished and data.status is not None and data.status != "FINISHED"
+    score_changing_while_finished = was_finished and (data.status is None or data.status == "FINISHED") and (
+        (data.home_score is not None and data.home_score != old_home_score) or
+        (data.away_score is not None and data.away_score != old_away_score)
+    )
+
+    if status_changing_away_from_finished or score_changing_while_finished:
+        from services.scheduler import unsettle_match
+        unsettle_match(db, match)
+
     if data.home_team_code is not None: 
         match.home_team_code = data.home_team_code
         # Sync name from Country if not explicitly provided
@@ -241,6 +256,17 @@ def admin_update_match(match_id: int, data: schemas.AdminMatchUpdate, current_ad
         if data.odds_analysis_text is not None: odds.analysis_text = data.odds_analysis_text
         
     db.commit()
+
+    # Detect if we need to calculate settlement now
+    is_now_finished = match.status == "FINISHED"
+    transitioning_to_finished = not was_finished and is_now_finished
+    re_settling_after_score_change = was_finished and is_now_finished and score_changing_while_finished
+
+    if transitioning_to_finished or re_settling_after_score_change:
+        from services.scheduler import settle_match, check_and_ready_next_day
+        settle_match(db, match)
+        check_and_ready_next_day(db, match.start_time.date())
+
     return {"message": "Match updated successfully"}
 
 from services.ai_service import generate_match_odds_and_analysis
