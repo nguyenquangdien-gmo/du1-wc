@@ -626,7 +626,7 @@
         <div class="container pb-5">
             <div class="d-flex flex-column align-items-center mb-4">
                 <h3 class="text-center text-uppercase fw-bold letter-spacing-1 mb-3">Lịch Thi Đấu</h3>
-                <div class="d-flex gap-4 justify-content-center">
+                <div class="d-flex flex-wrap gap-3 justify-content-center">
                     <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
                         <input class="form-check-input" type="checkbox" id="showLive" onchange="loadMatches()">
                         <label class="form-check-label text-danger fw-bold ms-2" for="showLive">
@@ -638,6 +638,32 @@
                         <label class="form-check-label text-info fw-bold ms-2" for="showNext6">
                             🕒 Hiện 6 trận tiếp theo
                         </label>
+                    </div>
+                    <div class="form-check form-switch bg-dark border border-secondary rounded px-4 py-2 shadow-sm">
+                        <input class="form-check-input" type="checkbox" id="showFinished" onchange="toggleFinishedFilter()">
+                        <label class="form-check-label text-success fw-bold ms-2" for="showFinished">
+                            🏁 Trận đã kết thúc
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Finished matches controls (Only visible when showFinished is checked) -->
+                <div id="finishedControls" class="mt-3 bg-dark border border-secondary rounded p-3 shadow-sm d-flex flex-wrap justify-content-center align-items-center gap-4" style="display: none; max-width: 600px; margin: 0 auto; width: 100%;">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-white small fw-bold mb-0">Sắp xếp:</label>
+                        <select id="finishedSort" class="form-select form-select-sm bg-secondary text-white border-0" style="width: 150px; cursor: pointer;" onchange="loadMatches(true)">
+                            <option value="recent" selected>Mới nhất ⬇</option>
+                            <option value="oldest">Cũ nhất ⬆</option>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-white small fw-bold mb-0">Hiển thị:</label>
+                        <select id="finishedLimit" class="form-select form-select-sm bg-secondary text-white border-0" style="width: 120px; cursor: pointer;" onchange="loadMatches(true)">
+                            <option value="6" selected>6 trận</option>
+                            <option value="12">12 trận</option>
+                            <option value="24">24 trận</option>
+                            <option value="all">Toàn bộ</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1030,6 +1056,16 @@
             window.location.href = '/';
         }
 
+        function toggleFinishedFilter() {
+            const isChecked = $('#showFinished').is(':checked');
+            if (isChecked) {
+                $('#finishedControls').removeClass('d-none').show();
+            } else {
+                $('#finishedControls').addClass('d-none').hide();
+            }
+            loadMatches();
+        }
+
         function loadMatches(isSilent = false) {
             if (!isSilent) {
                 $('#loadingOverlay').show().css('opacity', '1');
@@ -1049,8 +1085,9 @@
 
                 const isShowNext6 = $('#showNext6').is(':checked');
                 const isShowLive = $('#showLive').is(':checked');
+                const isShowFinished = $('#showFinished').is(':checked');
 
-                if (isShowNext6 || isShowLive) {
+                if (isShowNext6 || isShowLive || isShowFinished) {
                     $('#matchTabs').hide();
                     containers['groups'].empty();
                 } else {
@@ -1173,7 +1210,7 @@
                     </div>`;
                 }
 
-                if (isShowLive || isShowNext6) {
+                if (isShowLive || isShowNext6 || isShowFinished) {
                     if (isShowLive) {
                         containers['groups'].append('<div class="col-12 mt-2 mb-2"><h5 class="text-danger border-start border-danger border-4 ps-2 text-start text-uppercase small fw-bold">Trận đấu đang diễn ra</h5></div>');
                         let liveMatches = data.filter(m => m.status === 'LIVE');
@@ -1193,6 +1230,36 @@
                             containers['groups'].append('<div class="col-12 text-center py-3 opacity-50">Không có trận đấu tiếp theo.</div>');
                         } else {
                             upcoming.forEach(m => {
+                                containers['groups'].append(getMatchHTML(m));
+                            });
+                        }
+                    }
+
+                    if (isShowFinished) {
+                        const sortVal = $('#finishedSort').val() || 'recent';
+                        const limitVal = $('#finishedLimit').val() || '6';
+
+                        containers['groups'].append('<div class="col-12 mt-4 mb-2"><h5 class="text-success border-start border-success border-4 ps-2 text-start text-uppercase small fw-bold">Trận đấu đã kết thúc</h5></div>');
+                        
+                        let finished = data.filter(m => m.status === 'FINISHED');
+                        
+                        // Sort logic
+                        if (sortVal === 'recent') {
+                            finished.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+                        } else {
+                            finished.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+                        }
+
+                        // Limit logic
+                        if (limitVal !== 'all') {
+                            const limit = parseInt(limitVal, 10);
+                            finished = finished.slice(0, limit);
+                        }
+
+                        if (finished.length === 0) {
+                            containers['groups'].append('<div class="col-12 text-center py-3 opacity-50">Không có trận đấu đã kết thúc.</div>');
+                        } else {
+                            finished.forEach(m => {
                                 containers['groups'].append(getMatchHTML(m));
                             });
                         }
