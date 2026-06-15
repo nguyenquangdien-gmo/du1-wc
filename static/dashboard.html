@@ -1180,6 +1180,13 @@
                                 resultBadge = '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">WIN</span>';
                             } else if (pred.result === 'LOST') {
                                 resultBadge = '<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">LOST</span>';
+                            } else if (pred.result === 'DRAW') {
+                                const chosen = (pred.chosen_team || "").trim().toLowerCase();
+                                if (chosen === 'hòa' || chosen === 'draw') {
+                                    resultBadge = '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">WIN</span>';
+                                } else {
+                                    resultBadge = '<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">LOST</span>';
+                                }
                             }
                         }
                         predictionHtml = `
@@ -1485,6 +1492,13 @@
                             resultBadge = '<span class="badge bg-success ms-1" style="font-size:0.6rem">WIN</span>';
                         } else if (p.result === 'LOST') {
                             resultBadge = '<span class="badge bg-danger ms-1" style="font-size:0.6rem">LOST</span>';
+                        } else if (p.result === 'DRAW') {
+                            const chosen = (p.chosen_team || "").trim().toLowerCase();
+                            if (chosen === 'hòa' || chosen === 'draw') {
+                                resultBadge = '<span class="badge bg-success ms-1" style="font-size:0.6rem">WIN</span>';
+                            } else {
+                                resultBadge = '<span class="badge bg-danger ms-1" style="font-size:0.6rem">LOST</span>';
+                            }
                         }
                     }
 
