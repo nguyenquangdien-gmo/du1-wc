@@ -149,7 +149,8 @@ def get_match_predictions(match_id: int, current_user: models.User = Depends(get
             "user_full_name": p.user.full_name,
             "chosen_team": p.chosen_team,
             "use_lucky_star": p.use_lucky_star,
-            "is_me": p.user_id == current_user.id
+            "is_me": p.user_id == current_user.id,
+            "result": p.result
         })
     return res
 

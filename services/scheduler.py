@@ -208,7 +208,7 @@ def unsettle_match(db: Session, match: models.Match):
     for pred in predictions:
         stats = db.query(models.UserStats).filter_by(user_id=pred.user_id, year=match.year).first()
         if stats:
-            if pred.result == "WON":
+            if pred.result in ["WIN", "WON"]:
                 stats.total_correct = max(0, stats.total_correct - 1)
             elif pred.result == "LOST":
                 stats.total_wrong = max(0, stats.total_wrong - 1)
@@ -240,23 +240,24 @@ def settle_match(db: Session, match: models.Match):
             db.add(stats)
             db.flush()
 
+        chosen_normalized = (pred.chosen_team or "").strip().lower()
         if winning_team_bet == "DRAW":
-            pred.result = "DRAW"
-            # Return money / no change
-            pred.money_changed = 0
+            is_won = chosen_normalized in ["hòa", "draw"]
         else:
-            if pred.chosen_team == winning_team_bet:
-                pred.result = "WON"
-                stats.total_correct += 1
-                pred.money_changed = 0
-                if pred.use_lucky_star:
-                    pred.money_changed = -lucky_star_amount # -300k meaning debt decreases by 300k
-            else:
-                pred.result = "LOST"
-                stats.total_wrong += 1
-                pred.money_changed = penalty
-                if pred.use_lucky_star:
-                    pred.money_changed += lucky_star_amount # +300k meaning debt increases by 300k
+            is_won = chosen_normalized == winning_team_bet.strip().lower()
+
+        if is_won:
+            pred.result = "WIN"
+            stats.total_correct += 1
+            pred.money_changed = 0
+            if pred.use_lucky_star:
+                pred.money_changed = -lucky_star_amount # -300k meaning debt decreases by 300k
+        else:
+            pred.result = "LOST"
+            stats.total_wrong += 1
+            pred.money_changed = penalty
+            if pred.use_lucky_star:
+                pred.money_changed += lucky_star_amount # +300k meaning debt increases by 300k
             
         stats.money_lost += pred.money_changed
         

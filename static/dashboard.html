@@ -1170,6 +1170,26 @@
                     let stageClass = m.status === 'LIVE' ? 'match-card-live' : '';
                     let cCount = m.comment_count > 0 ? `<span class="badge rounded-pill bg-danger ms-1" style="font-size: 0.6rem;">${m.comment_count}</span>` : '';
 
+                    let predictionHtml = '';
+                    if (m.user_prediction) {
+                        let pred = m.user_prediction;
+                        let star = pred.use_lucky_star ? ' 🌟' : '';
+                        let resultBadge = '';
+                        if (m.status === 'FINISHED') {
+                            if (pred.result === 'WIN' || pred.result === 'WON') {
+                                resultBadge = '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">WIN</span>';
+                            } else if (pred.result === 'LOST') {
+                                resultBadge = '<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">LOST</span>';
+                            }
+                        }
+                        predictionHtml = `
+                            <div class="mt-2 py-1 px-2 rounded small border border-secondary border-opacity-25" style="background: rgba(255,255,255,0.02);">
+                                <span class="text-secondary fw-semibold">Đã chọn:</span> 
+                                <span class="text-info fw-bold">${pred.chosen_team}${star}</span>${resultBadge}
+                            </div>
+                        `;
+                    }
+
                     return `
                     <div class="col-md-6 col-lg-4">
                         <div class="card match-card ${stageClass} p-3 h-100 text-center" onclick='openPredictionModal(${m.id})'>
@@ -1199,6 +1219,7 @@
                             </div>
                             <div class="mt-2">${oddsDisplay}</div>
                             ${m.locked ? '<div class="mt-2 text-secondary"><small>🔒 Locked</small></div>' : ''}
+                            ${predictionHtml}
                             
                             <!-- Comment Button -->
                             <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex justify-content-center">
@@ -1447,6 +1468,7 @@
         }
 
         function loadOtherPredictions(matchId) {
+            const match = window.allMatchesMap[matchId];
             $.get(`/api/predictions/match/${matchId}`, function (data) {
                 let list = $('#otherPredictionsList');
                 list.empty();
@@ -1457,10 +1479,19 @@
                     let star = p.use_lucky_star ? '🌟' : '';
                     let displayName = formatUserDisplay(p.user_full_name, p.user_email);
 
+                    let resultBadge = '';
+                    if (match && match.status === 'FINISHED' && p.result) {
+                        if (p.result === 'WIN' || p.result === 'WON') {
+                            resultBadge = '<span class="badge bg-success ms-1" style="font-size:0.6rem">WIN</span>';
+                        } else if (p.result === 'LOST') {
+                            resultBadge = '<span class="badge bg-danger ms-1" style="font-size:0.6rem">LOST</span>';
+                        }
+                    }
+
                     let item = `<li class="list-group-item border-secondary border-opacity-25 text-light d-flex justify-content-between align-items-center py-2 mb-1 shadow-sm" 
                     style="background: rgba(255,255,255,0.05); border-radius: 6px;">
                     <span class="small">${displayName}${badgeMe}</span>
-                    <span class="text-info fw-bold small">${p.chosen_team} ${star}</span>
+                    <span class="text-info fw-bold small">${p.chosen_team} ${star} ${resultBadge}</span>
                 </li>`;
                     list.append(item);
 
