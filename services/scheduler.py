@@ -8,7 +8,11 @@ import json
 import sqlalchemy
 import os
 
-scheduler = BackgroundScheduler()
+job_defaults = {
+    'coalesce': False,
+    'max_instances': 3  # Allows up to 3 instances of any job to run at once
+}
+scheduler = BackgroundScheduler(job_defaults=job_defaults)
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
 def get_db():
