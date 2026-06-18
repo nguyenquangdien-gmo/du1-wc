@@ -235,6 +235,27 @@ def settle_match(db: Session, match: models.Match):
     
     winning_team_bet = calculate_winner_asian_handicap(match.home_team, match.away_team, match.home_score, match.away_score, favorite, handicap)
     
+    # Resolve all valid names for home and away teams once per match to avoid DB queries in prediction loop
+    home_names = [match.home_team.strip().lower()]
+    if match.home_team_code:
+        home_names.append(match.home_team_code.strip().lower())
+        country = db.query(models.Country).filter_by(code=match.home_team_code.lower()).first()
+        if country:
+            if country.name_vn:
+                home_names.append(country.name_vn.strip().lower())
+            if country.name:
+                home_names.append(country.name.strip().lower())
+                
+    away_names = [match.away_team.strip().lower()]
+    if match.away_team_code:
+        away_names.append(match.away_team_code.strip().lower())
+        country = db.query(models.Country).filter_by(code=match.away_team_code.lower()).first()
+        if country:
+            if country.name_vn:
+                away_names.append(country.name_vn.strip().lower())
+            if country.name:
+                away_names.append(country.name.strip().lower())
+
     predictions = db.query(models.Prediction).filter_by(match_id=match.id).all()
     for pred in predictions:
         # Get or create UserStats for this user and this year
@@ -248,7 +269,9 @@ def settle_match(db: Session, match: models.Match):
         if winning_team_bet == "DRAW":
             is_won = chosen_normalized in ["hòa", "draw"]
         else:
-            is_won = chosen_normalized == winning_team_bet.strip().lower()
+            is_home_win = winning_team_bet.strip().lower() == match.home_team.strip().lower()
+            valid_names = home_names if is_home_win else away_names
+            is_won = chosen_normalized in valid_names
 
         if is_won:
             pred.result = "WIN"
