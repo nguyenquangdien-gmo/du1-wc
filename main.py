@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from alembic.config import Config
@@ -67,6 +68,15 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="World Cup 2026", lifespan=lifespan)
+
+# Cấu hình CORS để cho phép các request preflight OPTIONS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include routers
 app.include_router(auth.router)
