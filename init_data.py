@@ -56,7 +56,8 @@ def seed_data():
             {"key": "penalty_per_loss", "value": "20000"},
             {"key": "lucky_star_amount", "value": "300000"},
             {"key": "tournament_champion_fee", "value": "20000"},
-            {"key": "tournament_player_fee", "value": "20000"}
+            {"key": "tournament_player_fee", "value": "20000"},
+            {"key": "default_prediction_strategy", "value": "favorite"}
         ]
         for s in settings_to_seed:
             existing_setting = db.query(models.Setting).filter_by(key=s["key"]).first()

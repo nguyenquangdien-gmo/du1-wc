@@ -249,6 +249,8 @@ def admin_update_match(match_id: int, data: schemas.AdminMatchUpdate, current_ad
     if data.lucky_star_enabled is not None: match.lucky_star_enabled = data.lucky_star_enabled
     if data.home_score is not None: match.home_score = data.home_score
     if data.away_score is not None: match.away_score = data.away_score
+    if data.home_penalty is not None: match.home_penalty = data.home_penalty
+    if data.away_penalty is not None: match.away_penalty = data.away_penalty
     
     odds = db.query(models.MatchOdds).filter(models.MatchOdds.match_id == match_id).first()
     if not odds and any([data.odds_favorite_team, data.odds_underdog_team, data.odds_handicap, data.odds_analysis_text]):

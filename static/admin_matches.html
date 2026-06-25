@@ -398,6 +398,15 @@
                                 <label class="form-label text-warning fw-bold">Tiền Ngôi sao may mắn (DU1)</label>
                                 <input type="text" class="form-control bg-dark text-white border-secondary currency-input" id="setLuckyAmount">
                             </div>
+                            <div class="col-md-12">
+                                <label class="form-label text-warning fw-bold">Cách tự động chọn dự đoán cho thành viên chưa chọn trước trận</label>
+                                <select class="form-select bg-dark text-white border-secondary" id="setDefaultPredictionStrategy">
+                                    <option value="favorite">Mặc định (Chọn đội yêu thích / chấp cao nhất)</option>
+                                    <option value="team1">Chọn Đội 1 (Đội nhà)</option>
+                                    <option value="team2">Chọn Đội 2 (Đội khách)</option>
+                                    <option value="auto">Auto (Chọn ngẫu nhiên Đội 1, Đội 2 hoặc Hòa nếu tỷ lệ chấp là số nguyên)</option>
+                                </select>
+                            </div>
                             
                             <div class="col-12 mt-4 border-top border-secondary pt-4">
                                 <h6 class="text-white mb-3">Quản lý Batch tự động</h6>
@@ -588,6 +597,14 @@
                             <label class="form-label small text-uppercase fw-bold">Tỷ số Đội 2</label>
                             <input type="number" class="form-control bg-dark text-white border-secondary" id="editAwayScore" placeholder="0">
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-uppercase fw-bold">Penalty Đội 1</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" id="editHomePenalty" placeholder="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-uppercase fw-bold">Penalty Đội 2</label>
+                            <input type="number" class="form-control bg-dark text-white border-secondary" id="editAwayPenalty" placeholder="0">
+                        </div>
 
                         <div class="col-12 mt-4 d-flex justify-content-between align-items-center border-bottom border-secondary pb-2">
                             <h6 class="mb-0 text-info fw-bold">Kèo & AI Phân Tích</h6>
@@ -639,6 +656,14 @@
                         <div class="col-6">
                             <label class="form-label small text-uppercase fw-bold" id="scoreAwayLabel">Đội 2</label>
                             <input type="number" min="0" class="form-control bg-dark text-white border-secondary" id="scoreAwayInput" placeholder="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-uppercase fw-bold">Penalty Đội 1 (Nếu có)</label>
+                            <input type="number" min="0" class="form-control bg-dark text-white border-secondary" id="scoreHomePenaltyInput" placeholder="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-uppercase fw-bold">Penalty Đội 2 (Nếu có)</label>
+                            <input type="number" min="0" class="form-control bg-dark text-white border-secondary" id="scoreAwayPenaltyInput" placeholder="0">
                         </div>
                     </div>
                 </form>
@@ -908,6 +933,8 @@
         
         $('#editHomeScore').val(m.home_score !== null ? m.home_score : '');
         $('#editAwayScore').val(m.away_score !== null ? m.away_score : '');
+        $('#editHomePenalty').val(m.home_penalty !== null ? m.home_penalty : '');
+        $('#editAwayPenalty').val(m.away_penalty !== null ? m.away_penalty : '');
 
         if(m.odds) {
             $('#editFav').val(m.odds.favorite_team);
@@ -933,6 +960,8 @@
             lucky_star_enabled: $('#editLuckyEnabled').is(':checked'),
             home_score: $('#editHomeScore').val() !== '' ? parseInt($('#editHomeScore').val()) : null,
             away_score: $('#editAwayScore').val() !== '' ? parseInt($('#editAwayScore').val()) : null,
+            home_penalty: $('#editHomePenalty').val() !== '' ? parseInt($('#editHomePenalty').val()) : null,
+            away_penalty: $('#editAwayPenalty').val() !== '' ? parseInt($('#editAwayPenalty').val()) : null,
             odds_favorite_team: $('#editFav').val(),
             odds_underdog_team: $('#editUnderdog').val(),
             odds_handicap: parseFloat($('#editHandicap').val()) || 0,
@@ -969,6 +998,8 @@
         $('#scoreAwayLabel').text(m.away_team);
         $('#scoreHomeInput').val(m.home_score !== null ? m.home_score : '');
         $('#scoreAwayInput').val(m.away_score !== null ? m.away_score : '');
+        $('#scoreHomePenaltyInput').val(m.home_penalty !== null ? m.home_penalty : '');
+        $('#scoreAwayPenaltyInput').val(m.away_penalty !== null ? m.away_penalty : '');
         
         let scoreModal = new bootstrap.Modal(document.getElementById('updateScoreModal'));
         scoreModal.show();
@@ -984,10 +1015,14 @@
             return;
         }
         
+        let homePenaltyStr = $('#scoreHomePenaltyInput').val();
+        let awayPenaltyStr = $('#scoreAwayPenaltyInput').val();
         let payload = {
             status: 'FINISHED',
             home_score: parseInt(homeScoreStr),
-            away_score: parseInt(awayScoreStr)
+            away_score: parseInt(awayScoreStr),
+            home_penalty: homePenaltyStr !== '' ? parseInt(homePenaltyStr) : null,
+            away_penalty: awayPenaltyStr !== '' ? parseInt(awayPenaltyStr) : null
         };
         
         setLoadingState('btnSaveScore', true);
@@ -1153,6 +1188,7 @@
         $.get('/api/admin/settings', function(d) {
             $('#setPenalty').val(formatVND(d.penalty_per_loss || 0));
             $('#setLuckyAmount').val(formatVND(d.lucky_star_amount || 0));
+            $('#setDefaultPredictionStrategy').val(d.default_prediction_strategy || "favorite");
             $('#setTourChampFee').val(formatVND(d.tournament_champion_fee || 20000));
             $('#setTourPlayerFee').val(formatVND(d.tournament_player_fee || 20000));
             // Update fee info text
@@ -1172,6 +1208,7 @@
         let p = {
             penalty_per_loss: parseVND($('#setPenalty').val()),
             lucky_star_amount: parseVND($('#setLuckyAmount').val()),
+            default_prediction_strategy: $('#setDefaultPredictionStrategy').val(),
             tournament_champion_fee: parseVND($('#setTourChampFee').val()),
             tournament_player_fee: parseVND($('#setTourPlayerFee').val()),
             batch_live_interval: parseInt($('#setLiveInterval').val()),

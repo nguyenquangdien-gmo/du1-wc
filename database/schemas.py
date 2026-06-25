@@ -75,6 +75,8 @@ class MatchResponse(BaseModel):
     stadium_country: Optional[str] = None
     home_score: Optional[int]
     away_score: Optional[int]
+    home_penalty: Optional[int] = None
+    away_penalty: Optional[int] = None
     status: str
     locked: bool
     lucky_star_enabled: bool
@@ -115,6 +117,7 @@ class SettingUpdate(BaseModel):
     lucky_star_amount: Optional[int] = None
     tournament_champion_fee: Optional[int] = None
     tournament_player_fee: Optional[int] = None
+    default_prediction_strategy: Optional[str] = None
     
     batch_predict_interval: Optional[int] = None
     batch_predict_enabled: Optional[bool] = None
@@ -155,6 +158,8 @@ class AdminMatchUpdate(BaseModel):
     lucky_star_enabled: Optional[bool] = None
     home_score: Optional[int] = None
     away_score: Optional[int] = None
+    home_penalty: Optional[int] = None
+    away_penalty: Optional[int] = None
     
     odds_favorite_team: Optional[str] = None
     odds_underdog_team: Optional[str] = None

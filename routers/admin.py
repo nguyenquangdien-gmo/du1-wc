@@ -161,6 +161,7 @@ def update_settings(data: schemas.SettingUpdate, db: Session = Depends(get_db), 
         ('mattermost_message_template', data.mattermost_message_template),
         ('tournament_champion_fee', data.tournament_champion_fee),
         ('tournament_player_fee', data.tournament_player_fee),
+        ('default_prediction_strategy', data.default_prediction_strategy),
     ]
 
     # Special handling for token: only update if not empty and not masked value

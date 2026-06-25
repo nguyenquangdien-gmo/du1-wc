@@ -52,6 +52,7 @@ def init_settings():
             "mattermost_channel_id": "d97ni8o15py69pnjthuoqwc4ga",
             "mattermost_root_id": "zsq84zw87j887n17q4xqhr5hmw",
             "mattermost_message_template": "@all\n📢 Trận đấu sắp diễn ra!\n🏆 **{{stage}}**\n⚽ **{{home_team}}** vs **{{away_team}}**\n⏰ Bắt đầu lúc: **{{start_time}}**\n🏟️ Sân vận động: **{{stadium}}**",
+            "default_prediction_strategy": "favorite",
         }
         for k, v in defaults.items():
             if not db.query(models.Setting).filter(models.Setting.key == k).first():
@@ -65,16 +66,35 @@ def apply_default_predictions(db: Session, match: models.Match):
     # Get active users excluding admin
     users = db.query(models.User).filter(models.User.is_active == True, models.User.email != "admin@runsystem.net").all()
     
-    # Find default team (highest handicap equivalent)
-    default_team = match.odds.favorite_team if match.odds else match.home_team
+    # Get strategy from settings
+    strategy_setting = db.query(models.Setting).filter_by(key="default_prediction_strategy").first()
+    strategy = (strategy_setting.value or "favorite").strip().lower() if strategy_setting else "favorite"
+    
+    import random
 
     for user in users:
         pred = db.query(models.Prediction).filter_by(user_id=user.id, match_id=match.id).first()
         if not pred:
+            chosen = None
+            if strategy == "team1":
+                chosen = match.home_team
+            elif strategy == "team2":
+                chosen = match.away_team
+            elif strategy == "auto":
+                # auto: randomly choose for each member one of the 3 outcomes: Team 1, Team 2, or DRAW if the handicap is an integer
+                handicap = match.odds.handicap if match.odds else 0.0
+                if handicap % 1.0 == 0.0:
+                    choices = [match.home_team, match.away_team, "Hòa"]
+                else:
+                    choices = [match.home_team, match.away_team]
+                chosen = random.choice(choices)
+            else: # "favorite"
+                chosen = match.odds.favorite_team if match.odds else match.home_team
+                
             db.add(models.Prediction(
                 user_id=user.id,
                 match_id=match.id,
-                chosen_team=default_team,
+                chosen_team=chosen,
                 use_lucky_star=False
             ))
     # We don't commit here, caller should commit
@@ -110,14 +130,50 @@ def get_match_result_from_api(football_data_id: int):
             data = response.json()
             status = data.get("status")
             score_data = data.get("score", {})
+            duration = score_data.get("duration", "REGULAR")
             full_time_score = score_data.get("fullTime", {})
             
-            home_score = full_time_score.get("home")
-            away_score = full_time_score.get("away")
+            home_penalty = None
+            away_penalty = None
+            
+            if duration in ["EXTRA_TIME", "PENALTY_SHOOTOUT"]:
+                regular_time = score_data.get("regularTime", {})
+                extra_time = score_data.get("extraTime", {})
+                
+                home_reg = regular_time.get("home")
+                away_reg = regular_time.get("away")
+                home_et = extra_time.get("home")
+                away_et = extra_time.get("away")
+                
+                if home_reg is not None and home_et is not None:
+                    home_score = home_reg + home_et
+                else:
+                    penalties = score_data.get("penalties", {})
+                    pen_home = penalties.get("home") or 0
+                    full_home = full_time_score.get("home")
+                    home_score = (full_home - pen_home) if full_home is not None else 0
+                    
+                if away_reg is not None and away_et is not None:
+                    away_score = away_reg + away_et
+                else:
+                    penalties = score_data.get("penalties", {})
+                    pen_away = penalties.get("away") or 0
+                    full_away = full_time_score.get("away")
+                    away_score = (full_away - pen_away) if full_away is not None else 0
+                
+                if duration == "PENALTY_SHOOTOUT":
+                    penalties_data = score_data.get("penalties", {})
+                    home_penalty = penalties_data.get("home")
+                    away_penalty = penalties_data.get("away")
+            else:
+                home_score = full_time_score.get("home")
+                away_score = full_time_score.get("away")
             
             return {
                 "home_score": home_score if home_score is not None else 0,
                 "away_score": away_score if away_score is not None else 0,
+                "home_penalty": home_penalty,
+                "away_penalty": away_penalty,
                 "match_finished": status == "FINISHED",
                 "status": status
             }
@@ -163,6 +219,8 @@ def task_live_score_updater():
         print(f"API Live Update Result for Match {match.match_no} ({match.home_team} vs {match.away_team}): {update}")
         match.home_score = update["home_score"]
         match.away_score = update["away_score"]
+        match.home_penalty = update["home_penalty"]
+        match.away_penalty = update["away_penalty"]
         
         if update["match_finished"]:
             match.status = "FINISHED"
@@ -327,8 +385,8 @@ def task_match_notifications():
             
             # Cases: 30p, 5p, 0p
             target_intervals = [
-                (30, 'notified_30m'),
-                (5, 'notified_5m'),
+                # (30, 'notified_30m'),
+                # (5, 'notified_5m'),
                 (0, 'notified_0m')
             ]
             

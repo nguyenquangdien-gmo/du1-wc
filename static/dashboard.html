@@ -1163,6 +1163,9 @@
                     else badgeClass = 'badge-scheduled';
 
                     let scoreText = (m.status === 'READY' || m.status === 'SCHEDULED') ? 'VS' : `${m.home_score} - ${m.away_score}`;
+                    if (m.status === 'FINISHED' && m.home_penalty !== null && m.away_penalty !== null && m.home_penalty !== undefined && m.away_penalty !== undefined) {
+                        scoreText += ` (Pen ${m.home_penalty} - ${m.away_penalty})`;
+                    }
                     let timeStr = new Date(m.start_time).toLocaleString('vi-VN', {
                         day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
                     });

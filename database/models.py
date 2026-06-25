@@ -76,6 +76,8 @@ class Match(Base):
     stadium = Column(String(255), default="TBD")
     home_score = Column(Integer, default=None, nullable=True)
     away_score = Column(Integer, default=None, nullable=True)
+    home_penalty = Column(Integer, default=None, nullable=True)
+    away_penalty = Column(Integer, default=None, nullable=True)
     status = Column(String(20), default="SCHEDULED", index=True) # SCHEDULED, READY, LIVE, FINISHED
     locked = Column(Boolean, default=False)
     lucky_star_enabled = Column(Boolean, default=False)
