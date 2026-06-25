@@ -544,9 +544,12 @@
 <div class="modal fade" id="editMatchModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content shadow-lg" style="background-color: #16213e; color: white; border: 1px solid #e94560;">
-            <div class="modal-header border-bottom border-secondary">
+            <div class="modal-header border-bottom border-secondary d-flex justify-content-between align-items-center">
                 <h5 class="modal-title fw-bold">Chi Tiết Trận Đấu</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-info me-3 fw-bold" id="btnCalculateTeams" onclick="calculateTeams()">🔄 Tính toán đội</button>
+                    <button type="button" class="btn-close btn-close-white ms-0" data-bs-dismiss="modal"></button>
+                </div>
             </div>
             <div class="modal-body">
                 <form id="editMatchForm">
@@ -1042,6 +1045,42 @@
             },
             error: (err) => showMsg(err.responseJSON?.detail || "Lỗi cập nhật tỉ số", 'Lỗi'),
             complete: () => setLoadingState('btnSaveScore', false)
+        });
+    }
+
+    function calculateTeams() {
+        let mid = $('#editMid').val();
+        if (!mid) return;
+        
+        setLoadingState('btnCalculateTeams', true);
+        $.ajax({
+            url: `/api/admin/matches/${mid}/calculate-teams`,
+            type: 'GET',
+            success: function(data) {
+                if (data.home_team) {
+                    $('#editHome').val(data.home_team);
+                }
+                if (data.away_team) {
+                    $('#editAway').val(data.away_team);
+                }
+                if (data.home_team_code) {
+                    $('#editHomeCode').val(data.home_team_code);
+                } else {
+                    $('#editHomeCode').val("");
+                }
+                if (data.away_team_code) {
+                    $('#editAwayCode').val(data.away_team_code);
+                } else {
+                    $('#editAwayCode').val("");
+                }
+                showMsg("Đã tính toán tên đội thành công!", "Thông báo");
+            },
+            error: function(err) {
+                showMsg(err.responseJSON?.detail || "Lỗi tính toán tên đội", "Lỗi");
+            },
+            complete: function() {
+                setLoadingState('btnCalculateTeams', false);
+            }
         });
     }
 

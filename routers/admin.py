@@ -321,3 +321,143 @@ def delete_wc_year(year: int, db: Session = Depends(get_db), current_admin: mode
 
     db.commit()
     return {"message": f"Đã xóa toàn bộ dữ liệu World Cup {year}"}
+
+import re
+
+def get_group_standings(db: Session, group_name: str, year: int):
+    # Get all matches in this group (finished or not)
+    all_matches = db.query(models.Match).filter(
+        models.Match.group_name == group_name,
+        models.Match.year == year
+    ).all()
+    
+    teams = {}
+    for m in all_matches:
+        for team in [m.home_team, m.away_team]:
+            if team and team not in teams:
+                teams[team] = {"points": 0, "gd": 0, "gf": 0, "name": team}
+                
+    # Calculate from finished matches
+    for m in all_matches:
+        if m.status == "FINISHED":
+            h_score = m.home_score or 0
+            a_score = m.away_score or 0
+            
+            teams[m.home_team]["gf"] += h_score
+            teams[m.home_team]["gd"] += h_score - a_score
+            teams[m.away_team]["gf"] += a_score
+            teams[m.away_team]["gd"] += a_score - h_score
+            
+            if h_score > a_score:
+                teams[m.home_team]["points"] += 3
+            elif h_score < a_score:
+                teams[m.away_team]["points"] += 3
+            else:
+                teams[m.home_team]["points"] += 1
+                teams[m.away_team]["points"] += 1
+                
+    # Sort teams by Points (desc), GD (desc), GF (desc), Name (asc)
+    sorted_teams = sorted(
+        teams.values(),
+        key=lambda x: (-x["points"], -x["gd"], -x["gf"], x["name"])
+    )
+    return sorted_teams
+
+def resolve_placeholder(db: Session, team_name: str, year: int) -> str:
+    if not team_name:
+        return team_name
+        
+    match_1st = re.search(r'Nhất\s+bảng\s+([A-L])', team_name, re.IGNORECASE)
+    if match_1st:
+        g = match_1st.group(1).upper()
+        standings = get_group_standings(db, g, year)
+        if len(standings) >= 1:
+            return standings[0]["name"]
+            
+    match_2nd = re.search(r'Nhì\s+bảng\s+([A-L])', team_name, re.IGNORECASE)
+    if match_2nd:
+        g = match_2nd.group(1).upper()
+        standings = get_group_standings(db, g, year)
+        if len(standings) >= 2:
+            return standings[1]["name"]
+            
+    match_3rd = re.search(r'Thứ\s+3\s+bảng\s+([A-L/]+)', team_name, re.IGNORECASE)
+    if match_3rd:
+        groups_str = match_3rd.group(1)
+        group_list = [g.strip().upper() for g in groups_str.split("/") if g.strip()]
+        third_placed_teams = []
+        for g in group_list:
+            standings = get_group_standings(db, g, year)
+            if len(standings) >= 3:
+                third_placed_teams.append(standings[2])
+        if third_placed_teams:
+            sorted_thirds = sorted(third_placed_teams, key=lambda x: (-x["points"], -x["gd"], -x["gf"], x["name"]))
+            return sorted_thirds[0]["name"]
+            
+    match_win = re.search(r'Thắng\s+trận\s+(\d+)', team_name, re.IGNORECASE)
+    if match_win:
+        target_no = int(match_win.group(1))
+        target_match = db.query(models.Match).filter_by(match_no=target_no, year=year).first()
+        if target_match and target_match.status == "FINISHED":
+            h_score = target_match.home_score or 0
+            a_score = target_match.away_score or 0
+            if h_score > a_score:
+                return target_match.home_team
+            elif a_score > h_score:
+                return target_match.away_team
+            else:
+                hp = target_match.home_penalty or 0
+                ap = target_match.away_penalty or 0
+                if hp > ap:
+                    return target_match.home_team
+                else:
+                    return target_match.away_team
+                    
+    match_lose = re.search(r'Thua\s+trận\s+(\d+)', team_name, re.IGNORECASE)
+    if match_lose:
+        target_no = int(match_lose.group(1))
+        target_match = db.query(models.Match).filter_by(match_no=target_no, year=year).first()
+        if target_match and target_match.status == "FINISHED":
+            h_score = target_match.home_score or 0
+            a_score = target_match.away_score or 0
+            if h_score > a_score:
+                return target_match.away_team
+            elif a_score > h_score:
+                return target_match.home_team
+            else:
+                hp = target_match.home_penalty or 0
+                ap = target_match.away_penalty or 0
+                if hp > ap:
+                    return target_match.away_team
+                else:
+                    return target_match.home_team
+                    
+    return team_name
+
+def find_country_code(db: Session, team_name: str) -> str:
+    if not team_name:
+        return ""
+    # Try to find country by name or name_vn
+    country = db.query(models.Country).filter(
+        (models.Country.name.ilike(team_name)) | (models.Country.name_vn.ilike(team_name))
+    ).first()
+    return country.code.upper() if country else ""
+
+@router.get("/matches/{match_id}/calculate-teams")
+def calculate_match_teams(match_id: int, db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
+    match = db.query(models.Match).filter(models.Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+        
+    resolved_home = resolve_placeholder(db, match.home_team, match.year)
+    resolved_away = resolve_placeholder(db, match.away_team, match.year)
+    
+    home_code = find_country_code(db, resolved_home)
+    away_code = find_country_code(db, resolved_away)
+    
+    return {
+        "home_team": resolved_home,
+        "away_team": resolved_away,
+        "home_team_code": home_code,
+        "away_team_code": away_code
+    }
