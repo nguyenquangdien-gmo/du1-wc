@@ -69,7 +69,7 @@ def prompt_gemini_json(contents: Union[str, List[Any]]) -> Any:
     # Try Pro first
     try:
         response = client.models.generate_content(
-            model=MODEL_PRO,
+            model=MODEL_FLASH,
             contents=contents,
             config=default_generation_config
         )
@@ -91,7 +91,7 @@ def prompt_gemini_json(contents: Union[str, List[Any]]) -> Any:
         # Fallback 2: Flash
         try:
             response = client.models.generate_content(
-                model=MODEL_FLASH,
+                model=MODEL_PRO,
                 contents=contents,
                 config=default_generation_config
             )
